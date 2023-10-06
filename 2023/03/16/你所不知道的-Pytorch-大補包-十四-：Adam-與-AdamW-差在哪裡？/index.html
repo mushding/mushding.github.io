@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="問：為什麼剛剛前幾個介紹的優化器最近都不怎麼出現過，反而較近期的 BERT、最近流行的 Transformer 架構 ViT，都是使用 Adam 優化器，是…因為新潮所以使用它嗎？還是 Adam 真的有什麼可取之處？ keywords: Adam">
+<meta property="og:type" content="article">
+<meta property="og:title" content="你所不知道的 Pytorch 大補包(十四)：後起之秀 - Adam 之為什麼我的 Adam 比 SGD 效果差？">
+<meta property="og:url" content="https://mushding.space/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E5%9B%9B-%EF%BC%9AAdam-%E8%88%87-AdamW-%E5%B7%AE%E5%9C%A8%E5%93%AA%E8%A3%A1%EF%BC%9F/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="問：為什麼剛剛前幾個介紹的優化器最近都不怎麼出現過，反而較近期的 BERT、最近流行的 Transformer 架構 ViT，都是使用 Adam 優化器，是…因為新潮所以使用它嗎？還是 Adam 真的有什麼可取之處？ keywords: Adam">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/Be7rCpb.png">
+<meta property="article:published_time" content="2023-03-16T08:46:45.000Z">
+<meta property="article:modified_time" content="2023-03-26T07:38:25.583Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Pytorch">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/Be7rCpb.png">
+
+<link rel="canonical" href="https://mushding.space/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E5%9B%9B-%EF%BC%9AAdam-%E8%88%87-AdamW-%E5%B7%AE%E5%9C%A8%E5%93%AA%E8%A3%A1%EF%BC%9F/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>你所不知道的 Pytorch 大補包(十四)：後起之秀 - Adam 之為什麼我的 Adam 比 SGD 效果差？ | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E5%9B%9B-%EF%BC%9AAdam-%E8%88%87-AdamW-%E5%B7%AE%E5%9C%A8%E5%93%AA%E8%A3%A1%EF%BC%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          你所不知道的 Pytorch 大補包(十四)：後起之秀 - Adam 之為什麼我的 Adam 比 SGD 效果差？
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2023-03-16 16:46:45" itemprop="dateCreated datePublished" datetime="2023-03-16T16:46:45+08:00">2023-03-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2023-03-26 15:38:25" itemprop="dateModified" datetime="2023-03-26T15:38:25+08:00">2023-03-26</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85/" itemprop="url" rel="index"><span itemprop="name">Pytorch 大補包</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E5%9B%9B-%EF%BC%9AAdam-%E8%88%87-AdamW-%E5%B7%AE%E5%9C%A8%E5%93%AA%E8%A3%A1%EF%BC%9F/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2023/03/16/你所不知道的-Pytorch-大補包-十四-：Adam-與-AdamW-差在哪裡？/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>4.1k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>10 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>問：為什麼剛剛前幾個介紹的優化器最近都不怎麼出現過，反而較近期的
+BERT、最近流行的 Transformer 架構 ViT，都是使用 Adam
+優化器，是…因為新潮所以使用它嗎？還是 Adam 真的有什麼可取之處？</p>
+<p>keywords: Adam <span id="more"></span></p>
+<h2 id="adam">Adam</h2>
+<p>Adam 優化器在 2014 年提出，相較於 SGD、RMSProp
+來說是相對比較新的優化器。論文連結：<a
+target="_blank" rel="noopener" href="https://arxiv.org/abs/1412.6980">Adam: A Method for Stochastic
+Optimization</a></p>
+<p>Adam 名稱來自：Adaptive Moment
+Estimation，直翻就是「動態動量預估」，其特色是融合了 AdaGrad 與 RMSProp
+各自的優點，並且在這之上額外加入了 bias-correction</p>
+<p>以下是論文原文：</p>
+<blockquote>
+<p>the name Adam is derived from adaptive moment estimation. Our method
+is designed to combine the advantages of two recently popular methods:
+AdaGrad (Duchi et al., 2011), which works well with sparse gradients,
+and RMSProp (Tieleman &amp; Hinton, 2012)</p>
+</blockquote>
+<p>公式有點複雜，先來看核心公式：</p>
+<p><span class="math display">\[
+w_{t+1} = w_t-\eta\frac{\hat{m_t}}{\sqrt{\hat{v_t}}+\epsilon}
+\]</span></p>
+<p>Adam 公式中可分為兩個部份，一個長得像 Momentum 記作 <span
+class="math inline">\(\hat{m_t}\)</span> 稱做第一動量 (first moment
+estimate)，一個長得像 RMSProp 記做 <span
+class="math inline">\(\hat{v_t}\)</span> 稱做第二動量 (second raw moment
+estimate)，最後分母的 <span class="math inline">\(\epsilon\)</span>
+是平滑項避免除以 0。</p>
+<p><span class="math inline">\(\hat{m_t}\)</span> 如同 Momentum
+有歷史梯度平均的資訊，優點為更新速度快，<span
+class="math inline">\(\hat{v_t}\)</span> 如同 RMSProp
+有歷史梯度平方的平均，優點為動態調整學習率，但又不會因數值太使更新值接近
+0</p>
+<p>而各別的 <span class="math inline">\(\hat{m_t}\)</span> <span
+class="math inline">\(\hat{v_t}\)</span> 公式列記在下面：</p>
+<p><span class="math display">\[
+m_{t} = \beta_1\cdot m_{t} + (1-\beta_1)\cdot \nabla g_{t-1}
+\]</span></p>
+<p><span class="math display">\[
+v_{t} = \beta_2\cdot v_{t} + (1-\beta_2)\cdot (\nabla g_{t-1})^2
+\]</span></p>
+<p>Adam 有兩個超參數可調整，<span class="math inline">\(\beta_1\)</span>
+控制 <span class="math inline">\(m_t\)</span> 預設 0.9，<span
+class="math inline">\(\beta_2\)</span> 控制 <span
+class="math inline">\(v_t\)</span> 預設 0.999，兩個超參數超接近 1
+目的是使權重更新傾向參考<strong>歷史梯度</strong>而非目前梯度，使網路在遇到較複雜的曲面時有比較穩定的表現
+(不會因為目前梯度變化大而「三心二意」的)</p>
+<p><span class="math inline">\(\beta_2\)</span> 又比 <span
+class="math inline">\(\beta_1\)</span> 更靠近 1，因為 <span
+class="math inline">\(\beta_2\)</span>
+負責控制<strong>權重的平方和</strong>，使網路非常非常以歷史權重值為依據更新，如果太傾向考量當前權重值的話
+(<span class="math inline">\(1-\beta_2\)</span>)，容易使 <span
+class="math inline">\(v_t\)</span> 過大，進而使 <span
+class="math inline">\(m_t/\sqrt{v_t}\)</span> 接近 0 更新不了參數了
+(就這與 AdaGrad 的老毛病一樣)。</p>
+<p>眼睛尖的人可能已經發現了，為什麼在核心公式中 <span
+class="math inline">\(\hat{m_t}\)</span> <span
+class="math inline">\(\hat{v_t}\)</span> 頭上會有一頂帽子 hat 呢？</p>
+<p>這頂帽子代表的是 bias-correction，經由前時刻的梯度計算出來的 <span
+class="math inline">\(m_t\)</span> <span
+class="math inline">\(v_t\)</span>
+還會再經過一個偏差估算的步驟，校正式子中的計算誤差，使得最後正式參與更新的是
+<span class="math inline">\(\hat{m_t}\)</span> <span
+class="math inline">\(\hat{v_t}\)</span></p>
+<p><span class="math display">\[
+\hat{m_t} = \frac{m_t}{1-\beta_1^t}, \quad \hat{v_t} =
+\frac{v_t}{1-\beta_2^t}
+\]</span></p>
+<p>計算誤差！？哪裡有誤差？我怎麼沒看到，我覺得到目前為止都沒什麼問題呀。接下來我們來看看如果不加入
+bias-corretion，並且時間 <span class="math inline">\(t\)</span> 從 0
+開始慢慢往後推會發生什麼事情：</p>
+<p>令 <span class="math inline">\(t = 0\)</span> 時，初始動量 <span
+class="math inline">\(m_0 = 0, v_0 = 0\)</span>，且 <span
+class="math inline">\(\beta_1 = 0.9\)</span> <span
+class="math inline">\(\beta_2 = 0.999\)</span></p>
+<p>代入得：</p>
+<p><span class="math display">\[
+\begin{gather}
+m_1 = \beta_1 \cdot 0+ (1-\beta_1) \nabla g_0 = 0.1 \nabla g_0\\
+v_1 = \beta_2 \cdot 0+ (1-\beta_2) (\nabla g_0)^2 = 0.001 \nabla g_0^2
+\end{gather}
+\]</span></p>
+<p>如果不做 bias-correction 直接放到核心公式中會得：</p>
+<p><span class="math display">\[
+\begin{aligned}
+w_1 &amp;= \\
+&amp;= w_0 - \eta\frac{m_1}{\sqrt{v_1}+\epsilon}\\
+&amp;= w_0 - \eta \frac{0.1}{\sqrt{0.001}+10^{-8}}\\
+&amp;\approxeq w_0 - 3.16\eta
+\end{aligned}
+\]</span></p>
+<p>式子中的常數 3.16 只是一個很 ~
+大概除下來的數字，重點是在網路還沒參考任何歷史資訊下，網路對 <span
+class="math inline">\(w_0\)</span> 也就是初始參數 (實作上是亂數生成的)
+加權比例竟然有 3 倍之多，這個常數完全是因 <span
+class="math inline">\(\beta_1\)</span> <span
+class="math inline">\(\beta_2\)</span>
+一大一小所導致的。在網路還根本不知道往那裡收斂，就使 <span
+class="math inline">\(w_0\)</span> 占這麼重要的一部份，顯然不合理</p>
+<p>因此 Adam
+為了避免<strong>網路學習初期</strong>出現這種不合理的現象，Adam 加上了
+bias-correction</p>
+<p><span class="math display">\[
+\hat{m_t} = \frac{m_t}{1-\beta_1^t}, \quad \hat{v_t} =
+\frac{v_t}{1-\beta_2^t}
+\]</span></p>
+<p>使得 <span class="math inline">\(w_1\)</span> 改為：</p>
+<p><span class="math display">\[
+\begin{aligned}
+w_1 &amp;= \\
+&amp;= w_0 - \eta\frac{\hat{m_1}}{\sqrt{\hat{v_1}}+\epsilon}\\
+&amp;= w_0 - \eta \frac{g_t}{g_t+10^{-8}}\\
+&amp;\approxeq w_0 -\eta
+\end{aligned}
+\]</span></p>
+<p>把初期因 <span class="math inline">\(\beta_1\)</span> <span
+class="math inline">\(\beta_2\)</span>
+一大一小所造成的影響降到最低。</p>
+<p>那既然這個 bias-correction 是針對初期網路設計的，是不是我們可以把
+Adam 設計成兩段式的…？還是 bias-correction
+對於後續網路也是有影響的…？</p>
+<p>更詳細的討論可以參考這一篇 stackoverflow
+裡面討論的很不錯，有興趣的人可以沿伸閱讀一下</p>
+<p><a
+target="_blank" rel="noopener" href="https://stats.stackexchange.com/questions/232741/why-is-it-important-to-include-a-bias-correction-term-for-the-adam-optimizer-for">Why
+is it important to include a bias correction term for the Adam optimizer
+for Deep Learning?</a></p>
+<p>在 Pytorch 實作中有 Adam 套件可以直接呼叫使用：其中 betas
+不用修改照預設的就可以了，最需要注意的是學習率的部份</p>
+<p><img src="https://i.imgur.com/Be7rCpb.png" alt="Image" /></p>
+<h2 id="使用-adam-還需要調整學習率嗎">使用 Adam
+還需要調整學習率嗎？</h2>
+<p>AdaGrad、RMSProp、Adam 這三個優化器都有著同樣的目標 -&gt;
+動態的調整學習率，在 Pytorch 中也有一個函式庫
+<code>torch.optim.lr_scheduler</code> 它的目標也是 -&gt;
+動態的調整學習率，那…如果今天我的網路選用這些優化器，我還會需要
+lr_scheduler 嗎？或是反過來，我的程式裡有 lr_scheduler
+我還可以用上述三個優化嗎？</p>
+<p>要回答這個問題可以來參考公式：</p>
+<p><span class="math display">\[
+w_{t+1} = w_t-\eta\frac{\hat{m_t}}{\sqrt{\hat{v_t}}+\epsilon}
+\]</span></p>
+<p>可以發現 Adam 中的學習率與 <span class="math inline">\(m\)</span>
+<span class="math inline">\(v\)</span> 無關，因此 Adam
+中所謂的動態調整學習率，並沒影響到學習率 <span
+class="math inline">\(\eta\)</span>，而在 Pytorch
+的實作中這兩個東西也是分開實作的，所以這個問題就可以改成：哪一個排別組合對你的網路是正向幫助的</p>
+<p>根據下列文章表示，雖然使用 Adam，但適時的用 lr_scheduler
+還是有不錯的效果</p>
+<p>參考自：<a
+target="_blank" rel="noopener" href="https://discuss.pytorch.org/t/with-adam-optimizer-is-it-necessary-to-use-a-learning-scheduler/66477">With
+Adam optimizer, is it necessary to use a learning scheduler?</a></p>
+<h2 id="為什我的網路用-adam-比-sgd-還要差">為什我的網路用 Adam 比 SGD
+還要差…？</h2>
+<p>你可以說當 <span class="math inline">\(\beta_1=0\)</span> <span
+class="math inline">\(v_t=0\)</span> 時，Adam 其實與 SGD
+是一模一樣的，也就是 SGD 是 Adam 的一種特例，SGD 是 Adam 的子集合</p>
+<p>也因為 Adam 彈性大、可調參數多，相較於 SGD
+分佈範圍大，所以比較難調出一個好參數使網路收斂</p>
+<p>一般遇到的問題就是學習率設太大，Adam 一般來說初始學習率會設 <span
+class="math inline">\(10^{-3}\)</span>，而 SGD 可以設 <span
+class="math inline">\(0.1\)</span>，所以在實作上如果只是單純的把 Pytorch
+code 從 <code>torch.optim.SGD</code> 改成 <code>torch.optim.Adam</code>
+效果一定不會好到那裡去…</p>
+<p>參考：<a
+target="_blank" rel="noopener" href="https://medium.com/ai-blog-tw/deep-learning-%E7%82%BA%E4%BB%80%E9%BA%BCadam%E5%B8%B8%E5%B8%B8%E6%89%93%E4%B8%8D%E9%81%8Esgd-%E7%99%A5%E7%B5%90%E9%BB%9E%E8%88%87%E6%94%B9%E5%96%84%E6%96%B9%E6%A1%88-fd514176f805">為什麼Adam常常打不過SGD？癥結點與改善方案</a></p>
+<h2 id="reference">Reference</h2>
+<p><a
+target="_blank" rel="noopener" href="https://stats.stackexchange.com/questions/232741/why-is-it-important-to-include-a-bias-correction-term-for-the-adam-optimizer-for">Why
+is it important to include a bias correction term for the Adam optimizer
+for Deep Learning?</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://hackmd.io/@allen108108/H1l4zqtp4">Adagrad、RMSprop、Momentum
+and Adam – 特殊的學習率調整方式</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://discuss.pytorch.org/t/with-adam-optimizer-is-it-necessary-to-use-a-learning-scheduler/66477">With
+Adam optimizer, is it necessary to use a learning scheduler?</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-一-：從官方-mnist-source-code-來學習-Pytorch/" rel="bookmark">你所不知道的 Pytorch 大補包(一)：從官方 mnist source code 來學習 Pytorch</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-三-：網路模型-torch-nn-Module/" rel="bookmark">你所不知道的 Pytorch 大補包(三)：網路模型 torch.nn.Module</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-二-：Dataset-DataLoader/" rel="bookmark">你所不知道的 Pytorch 大補包(二)：Dataset DataLoader</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-四-：資料擴增、前處理-torchvision-transforms/" rel="bookmark">你所不知道的 Pytorch 大補包(四)：資料擴增、前處理 torchvision.transforms</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/29/你所不知道的-Pytorch-大補包-七-：訓練小技巧-AMP-混合精度/" rel="bookmark">你所不知道的 Pytorch 大補包(七)：訓練小技巧 AMP 混合精度</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Pytorch/" rel="tag"># Pytorch</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E4%B8%89-%EF%BC%9A%E6%88%91%E5%8F%AF%E4%BB%A5%E5%9C%A8-optimizer-%E4%B8%AD%E5%8B%95%E6%85%8B%E7%9A%84%E8%AA%BF%E6%95%B4%E5%AD%B8%E7%BF%92%E7%8E%87%E5%97%8E%EF%BC%9F-RMSProp%E3%80%81AdaGrad/" rel="prev" title="你所不知道的 Pytorch 大補包(十三)：我可以在 optimizer 中動態的調整學習率嗎？- RMSProp、AdaGrad">
+      <i class="fa fa-chevron-left"></i> 你所不知道的 Pytorch 大補包(十三)：我可以在 optimizer 中動態的調整學習率嗎？- RMSProp、AdaGrad
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E4%BA%94-%EF%BC%9A%E6%88%91%E7%9A%84%E6%A8%A1%E5%9E%8B%E8%A8%93%E7%B7%B4%E5%A5%BD%EF%BC%9B%E5%8F%AF%E6%98%AF%E6%B8%AC%E8%A9%A6%E4%B8%8D%E5%A5%BD%E6%80%8E%E9%BA%BC%E8%BE%A6%E2%80%A6%EF%BC%9F-overfitting-%E8%88%87-regularization/" rel="next" title="你所不知道的 Pytorch 大補包(十五)：我的模型訓練好；可是測試不好怎麼辦…？- overfitting 與 regularization">
+      你所不知道的 Pytorch 大補包(十五)：我的模型訓練好；可是測試不好怎麼辦…？- overfitting 與 regularization <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#adam"><span class="nav-number">1.</span> <span class="nav-text">Adam</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-adam-%E9%82%84%E9%9C%80%E8%A6%81%E8%AA%BF%E6%95%B4%E5%AD%B8%E7%BF%92%E7%8E%87%E5%97%8E"><span class="nav-number">2.</span> <span class="nav-text">使用 Adam
+還需要調整學習率嗎？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%82%BA%E4%BB%80%E6%88%91%E7%9A%84%E7%B6%B2%E8%B7%AF%E7%94%A8-adam-%E6%AF%94-sgd-%E9%82%84%E8%A6%81%E5%B7%AE"><span class="nav-number">3.</span> <span class="nav-text">為什我的網路用 Adam 比 SGD
+還要差…？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2023/03/16/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E5%9B%9B-%EF%BC%9AAdam-%E8%88%87-AdamW-%E5%B7%AE%E5%9C%A8%E5%93%AA%E8%A3%A1%EF%BC%9F/";
+    this.page.identifier = "2023/03/16/你所不知道的-Pytorch-大補包-十四-：Adam-與-AdamW-差在哪裡？/";
+    this.page.title = "你所不知道的 Pytorch 大補包(十四)：後起之秀 - Adam 之為什麼我的 Adam 比 SGD 效果差？";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

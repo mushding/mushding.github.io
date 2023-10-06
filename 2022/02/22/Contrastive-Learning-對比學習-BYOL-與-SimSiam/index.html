@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="本篇接續上篇文章，依照時間順序介紹有關對比學習的論文：BYOL -&gt; SimSiam keywords: BYOL、SimSiam">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Contrastive Learning 對比學習: BYOL 與 SimSiam">
+<meta property="og:url" content="https://mushding.space/2022/02/22/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-BYOL-%E8%88%87-SimSiam/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="本篇接續上篇文章，依照時間順序介紹有關對比學習的論文：BYOL -&gt; SimSiam keywords: BYOL、SimSiam">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/fQ3PXrc.png">
+<meta property="og:image" content="https://i.imgur.com/ep8f3g8.png">
+<meta property="og:image" content="https://i.imgur.com/WYaWLL9.png">
+<meta property="og:image" content="https://i.imgur.com/q31nKpw.png">
+<meta property="article:published_time" content="2022-02-22T12:18:23.000Z">
+<meta property="article:modified_time" content="2022-02-25T10:14:05.620Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Contrastive Learning">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/fQ3PXrc.png">
+
+<link rel="canonical" href="https://mushding.space/2022/02/22/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-BYOL-%E8%88%87-SimSiam/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Contrastive Learning 對比學習: BYOL 與 SimSiam | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/02/22/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-BYOL-%E8%88%87-SimSiam/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Contrastive Learning 對比學習: BYOL 與 SimSiam
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-02-22 20:18:23" itemprop="dateCreated datePublished" datetime="2022-02-22T20:18:23+08:00">2022-02-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-25 18:14:05" itemprop="dateModified" datetime="2022-02-25T18:14:05+08:00">2022-02-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/02/22/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-BYOL-%E8%88%87-SimSiam/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/02/22/Contrastive-Learning-對比學習-BYOL-與-SimSiam/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>2.9k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>7 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本篇接續上篇文章，依照時間順序介紹有關對比學習的論文：BYOL -&gt;
+SimSiam</p>
+<p>keywords: BYOL、SimSiam <span id="more"></span></p>
+<p>前篇文章介紹了 MoCo、SimCLR
+兩篇優秀的自監督式學習，它們有個共通點：<strong>都在負樣本的尋找上動手腳</strong>。MoCo
+用一個 Queue 來儲存之前的負樣本、SimCLR 直接把 Batch 設超大來解決</p>
+<h2 id="我們一定要負樣本嗎">我們一定要負樣本嗎？</h2>
+<p>在回答這個問題前，先來了解為什麼 MoCo SimCLR 視負樣本為重。以 SimCLR
+的想法為例：一張圖片做兩種不同的資料擴增，經過網路找出特徵後，在最後結果的向量空間內，兩向量距離應該會非常接近。但如果我們只使用正樣本來這樣訓練的話，那網路是不是每次只要輸出<strong>一個等於自己的常數</strong>就會永遠得到最大的相似度？，大家稱這種現象叫
+collapsing output。</p>
+<p><img src="https://i.imgur.com/fQ3PXrc.png"
+alt="image-20220224165354961" /></p>
+<p>其中一種解決 collapsing output
+的方法就是引入負樣本，使得樣本間存在一定的負雜度，不會讓網路往奇怪的地方收斂</p>
+<p>但 MoCo、SimCLR
+也同時證明了，不管使用哪種增加負樣本的方法，訓練起來都非常的麻煩，或是對硬體要求非常高。而後來的
+BYOL、SimSiam
+就在這個出發點上以提出一個「簡單、直覺」的自監督學習方法，來嘗試去掉負樣本。</p>
+<h2 id="byol">BYOL</h2>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2006.07733.pdf">Bootstrap Your Own
+Latent A New Approach to Self-Supervised Learning</a></p>
+<p>以下是 BYOL 的架構圖，網路的流程為：</p>
+<p>一張影像 x 經過兩個不同的資料擴增得到 <span
+class="math inline">\(t\)</span> <span
+class="math inline">\(t&#39;\)</span> ，其中上面的分支稱為
+<strong>online</strong>，下面的分支稱為 <strong>target</strong>。online
+會依序經過三次線性轉換 (view -&gt; representation -&gt; projection -&gt;
+prediction)，而 target 只會做兩次線性轉換 (view -&gt; representation
+-&gt; projection)。最後 online 的 preduction <span
+class="math inline">\(q_\theta(z_\theta)\)</span> 與 target 的
+projection <span class="math inline">\(sg(z_\xi&#39;)\)</span>
+會做相似度的 loss。</p>
+<p><img src="https://i.imgur.com/ep8f3g8.png"
+alt="image-20220225143219347" /></p>
+<p>而相似度的公式的流程：把最後兩個結果 <span
+class="math inline">\(q_\theta(z_\theta)\)</span> <span
+class="math inline">\(sg(z_\xi&#39;)\)</span> 做 L2 Loss <span
+class="math display">\[
+\mathcal{L}_{\theta,\xi}\triangleq\,\mid\mid\bar{q_\theta}(z_\theta)-\bar{z&#39;_\xi}\mid\mid^2_2\quad=2-2*\frac{\langle
+q_\theta(z_\theta),z&#39;_\xi\rangle}{\mid\mid
+q_\theta(z_\theta)\mid\mid_2\cdot\mid\mid z&#39;_\xi\mid\mid_2}
+\]</span> 計算完 Loss 後 online 會照 Loss 做 Backpropagation，而 target
+則是透過 momentum 來更新。(上圖中的 sg 代表為 stop-gradient 的意思)
+<span class="math display">\[
+\begin{gather}
+\theta \leftarrow \mathrm{optimizer}(\theta,
+\triangledown\theta\mathcal{L}^{BOYL}_{\theta, \xi}, \eta)\\
+\xi \leftarrow\tau\xi+(1-\tau)\theta
+\end{gather}
+\]</span> 整體網路架構與 MoCo 不同的點在於去掉了 memory bank
+的設計，整個網路只會使用正樣本來訓練。而與 SimCLR
+最大的不同在加上了一個新 prediction
+層，換句話說又多加了一層線性轉換層</p>
+<p>以上就是 BYOL
+整體架構，可以看到網路只使用正樣本來訓練，但是網路並沒有提出任何顯著的方法來避免
+collapsing output 的發生，而且我們從 Loss function
+就可以發現，當存在一個特殊解：online 與 target 皆輸出一恆定常數時，Loss
+為零。可以說在 Loss function 中可以發現 collapsing output
+的存在，但是這篇論文是解釋是說，經實驗證明，加入 prediction
+層可以把發生的機率降到最低，從而使網路穩定。</p>
+<h2 id="simsiam">SimSiam</h2>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2011.10566v1.pdf">Exploring Simple
+Siamese Representation Learning</a></p>
+<p>SimSiam 為 Simple Siamese 的縮寫，先開始介紹什麼是 Siamese
+網路。Siamese
+的原意是孿生的意思，應用在神經網路的的意思為：<strong>有兩個網路，它們有各自的輸入，但是擁有相同的參數權重</strong>。</p>
+<p><img src="https://i.imgur.com/WYaWLL9.png"
+alt="image-20220225160653482" /></p>
+<p>而這一篇 SimSiam 論文中，作者把自監督學習的這種架構看作 Siamese
+網路，把輸入圖片做兩種不同的擴增後放進「參數共享」的網路中，最後再比較兩網路輸出的相似度。網路架構如下圖：</p>
+<p><img src="https://i.imgur.com/q31nKpw.png"
+alt="image-20220225155643647" /></p>
+<p>等等…是不是有一個地方怪怪的…，「參數共享」的網路？不就是同一個網路嗎？沒錯在原論文中作者說
+<code>In a nutshell, our method can be thought of as "BYOL without the momentum encoder"</code>
+也就是在說： SimSiam 與 BYOL 的最大差別在有沒有做 momentum 更新。</p>
+<p>作者提出的 SimSiam
+主要的核心概念是：提出一個超極直白的自監督式學習的架構，沒有負樣本、沒有超大
+Batch Size、沒有 momentum。除了效果很簡單外，也很神奇的避免了 collapsing
+output 的發生。</p>
+<p>作者經實驗發現 BYOL 的三項改進 momentum encoder、predictor 和 stop
+gradient 中，真正能避免 collapsing output 發生的是 stop gradient</p>
+<p>但是在論文原文 4.7 Summary
+章節中作者自己也提到了：<code>but we have seen no evidence that they are related to collapse prevention</code>
+。簡單來說現在大家還不知道為什麼 prediction 層效果這麼好、為什麼 stop
+gradient 可以避免 collapsing output</p>
+<h2 id="結論">結論</h2>
+<p>BYOL 以及 SimSiam
+都是在把自監督式學習往更簡單更直覺的方向前進，去除掉了之前論文較複雜的部份，只是目前還沒有人搞懂為什麼這種架構效果這麼的好…</p>
+<p>我自己也認為是如此，論文中大部份都是先有實驗結果才有理論證明，就…看起來不是很能說服人呢…希望後續有更多論文可以提出新架構來解釋這一切</p>
+<h2 id="reference">Reference</h2>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/dhaiuda/article/details/117897881">BYOL
+csdn</a></p>
+<p><a target="_blank" rel="noopener" href="https://iter01.com/581069.html">孿生網路</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://generallyintelligent.ai/blog/2020-08-24-understanding-self-supervised-contrastive-learning/">MoCo
+SimCLR BYOL 大整理 (英文)</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.gushiciku.cn/pl/gLs8/zh-tw">MoCo SimCLR BYOL
+SimSiam 大整理 (極市平台)</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.gushiciku.cn/pl/gLs8/zh-tw">MoCo SimCLR BYOL
+SimSiam 大整理 (軟體之心)</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/17/Self-supervised-Learning-與-Contrastive-Learning-速讀/" rel="bookmark">Self-supervised Learning 與 Contrastive Learning 速讀</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/21/Contrastive-Learning-對比學習-MoCo-與-SimCLR/" rel="bookmark">Contrastive Learning 對比學習: MoCo 與 SimCLR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/25/DINO-Emerging-Properties-in-Self-Supervised-Vision-Transformers-把-Vision-Transformer-用在自監督學習上/" rel="bookmark">DINO: Emerging Properties in Self-Supervised Vision Transformers - 把 Vision Transformer 用在自監督學習上</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Contrastive-Learning/" rel="tag"># Contrastive Learning</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/02/21/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-MoCo-%E8%88%87-SimCLR/" rel="prev" title="Contrastive Learning 對比學習: MoCo 與 SimCLR">
+      <i class="fa fa-chevron-left"></i> Contrastive Learning 對比學習: MoCo 與 SimCLR
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/25/DINO-Emerging-Properties-in-Self-Supervised-Vision-Transformers-%E6%8A%8A-Vision-Transformer-%E7%94%A8%E5%9C%A8%E8%87%AA%E7%9B%A3%E7%9D%A3%E5%AD%B8%E7%BF%92%E4%B8%8A/" rel="next" title="DINO: Emerging Properties in Self-Supervised Vision Transformers - 把 Vision Transformer 用在自監督學習上">
+      DINO: Emerging Properties in Self-Supervised Vision Transformers - 把 Vision Transformer 用在自監督學習上 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%88%91%E5%80%91%E4%B8%80%E5%AE%9A%E8%A6%81%E8%B2%A0%E6%A8%A3%E6%9C%AC%E5%97%8E"><span class="nav-number">1.</span> <span class="nav-text">我們一定要負樣本嗎？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#byol"><span class="nav-number">2.</span> <span class="nav-text">BYOL</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#simsiam"><span class="nav-number">3.</span> <span class="nav-text">SimSiam</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">4.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/02/22/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-BYOL-%E8%88%87-SimSiam/";
+    this.page.identifier = "2022/02/22/Contrastive-Learning-對比學習-BYOL-與-SimSiam/";
+    this.page.title = "Contrastive Learning 對比學習: BYOL 與 SimSiam";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

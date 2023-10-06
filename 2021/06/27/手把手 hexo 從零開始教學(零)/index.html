@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="因為疫情期間基本上跟本不能去實驗室，都整天待在家裡面，變成說就算到了暑假也沒什麼感覺 w ，反正每天過的生活也差不多就那樣。為了可以更能提起精神看看論文、寫寫筆記，決定用 hexo 來架一個自己的網站，上面來放一些論文筆記什麼的…，以下是 hexo 的一樣心得。 keywords: hexo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手 hexo 從零開始教學(零)">
+<meta property="og:url" content="https://mushding.space/2021/06/27/%E6%89%8B%E6%8A%8A%E6%89%8B%20hexo%20%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8(%E9%9B%B6)/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="因為疫情期間基本上跟本不能去實驗室，都整天待在家裡面，變成說就算到了暑假也沒什麼感覺 w ，反正每天過的生活也差不多就那樣。為了可以更能提起精神看看論文、寫寫筆記，決定用 hexo 來架一個自己的網站，上面來放一些論文筆記什麼的…，以下是 hexo 的一樣心得。 keywords: hexo">
+<meta property="og:locale" content="zh_TW">
+<meta property="article:published_time" content="2021-06-27T03:06:13.000Z">
+<meta property="article:modified_time" content="2022-02-22T16:57:46.030Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="hexo">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://mushding.space/2021/06/27/%E6%89%8B%E6%8A%8A%E6%89%8B%20hexo%20%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8(%E9%9B%B6)/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>手把手 hexo 從零開始教學(零) | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/06/27/%E6%89%8B%E6%8A%8A%E6%89%8B%20hexo%20%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8(%E9%9B%B6)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手 hexo 從零開始教學(零)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-06-27 11:06:13" itemprop="dateCreated datePublished" datetime="2021-06-27T11:06:13+08:00">2021-06-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-23 00:57:46" itemprop="dateModified" datetime="2022-02-23T00:57:46+08:00">2022-02-23</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hexo-%E5%BF%83%E5%BE%97%E7%AD%86%E8%A8%98/" itemprop="url" rel="index"><span itemprop="name">hexo 心得筆記</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/06/27/%E6%89%8B%E6%8A%8A%E6%89%8B%20hexo%20%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8(%E9%9B%B6)/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/06/27/手把手 hexo 從零開始教學(零)/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>2.2k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>5 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>因為疫情期間基本上跟本不能去實驗室，都整天待在家裡面，變成說就算到了暑假也沒什麼感覺
+w
+，反正每天過的生活也差不多就那樣。為了可以更能提起精神看看論文、寫寫筆記，決定用
+hexo 來架一個自己的網站，上面來放一些論文筆記什麼的…，以下是 hexo
+的一樣心得。</p>
+<p>keywords: hexo <span id="more"></span></p>
+<h1 id="手把手-hexo-從零開始教學零">手把手 hexo 從零開始教學(零)</h1>
+<h2 id="hexo-常用指令">hexo 常用指令</h2>
+<p>目前有三個最常用到指令 * 生成 public 檔 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hexo generate</span><br><span class="line">hexo g</span><br></pre></td></tr></table></figure> *
+開起一個簡單的 server <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hexo server</span><br><span class="line">hexo s</span><br></pre></td></tr></table></figure> * 把 public 檔刪掉 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo clean</span><br></pre></td></tr></table></figure>
+都常我都會用 npm 把它們合在一起，這樣開發的時候 debug 比較方便一些
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo clean &amp;&amp; hexo g &amp;&amp; hexo s --debug</span><br></pre></td></tr></table></figure></p>
+<h2 id="hexo-上使用-mathjax-踩雷">hexo 上使用 mathjax 踩雷</h2>
+<p>hexo 上面初始的 markdown 編釋器是
+marked，但是它只能處理一些文本上的需求，如果在筆記中需要用到 mathjax
+等數學符號，就要把 marked 換掉。</p>
+<p>網路上有推薦說有兩個套件可以換，分別是 * hexo-renderer-pandoc *
+hexo-renderer-kramed</p>
+<p>兩個都對 mathjax 的支援度很高，但根據 nexT 官網的描述，以及我個人花了
+2 個小時 google 的心得…，pandoc 比較推薦，kramed 就是會發生一些神奇的
+bug，什麼 $$ 顯示不出來阿…</p>
+<p><a
+target="_blank" rel="noopener" href="https://github.com/theme-next/hexo-theme-next/blob/master/docs/zh-CN/MATH.md">nexT
+官網的解釋</a></p>
+<p>總之以下推薦使用 pandoc 做為編釋以及一些細節的小修改：</p>
+<ul>
+<li>首先把 marked 移除，不然 pandoc 會跟它版本衝突 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm uninstall hexo-renderer-marked --save</span><br></pre></td></tr></table></figure></li>
+<li>接著安裝 pandoc <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo</span><br></pre></td></tr></table></figure></li>
+<li>接著在 nexT 的 _config.yml 中把 math 的地方 enable
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">math:</span><br><span class="line">  ...</span><br><span class="line">  mathjax:</span><br><span class="line">    enable: true</span><br></pre></td></tr></table></figure></li>
+<li>最後重新整理一下 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo clean &amp;&amp; hexo g &amp;&amp; hexo s --debug</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>就大功告成啦啦，可以來試試看 inlineMath 跟 displayMath 有沒有成功</p>
+<p><span class="math inline">\(a = b + c\)</span></p>
+<p><span class="math display">\[
+\begin{gathered}
+    a = b + c \\
+    i = 1, 2
+\end{gathered}
+\]</span></p>
+<h2 id="調教-pandoc">調教 pandoc</h2>
+<p>裝完 pandoc 後會發現一些圖片註解的地方會跑出來兩邊，嗯…對我來說有點煩
+w，所以我上網找了一下發現只要在 hexo 的 _config.yml
+加入一些設定就可以了：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pandoc:</span><br><span class="line">  extensions:</span><br><span class="line">    - &#x27;-implicit_figures&#x27;</span><br></pre></td></tr></table></figure>
+<p>還有一個問題，就是也不知道為什麼 pandoc 的 $$ 數學公式加上 \\
+不會換行…，後來一查才知道，原來 mathjax 有提供多功能的數學公式排版 w
+，要把那個加上去才行</p>
+<p>以下列出如果要使用換行公式的做法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$$</span><br><span class="line">\begin&#123;gathered&#125;</span><br><span class="line">    ...</span><br><span class="line">\end&#123;gathered&#125;</span><br><span class="line">$$</span><br></pre></td></tr></table></figure>
+<p>以上就大功告成啦，得到一個排板漂亮，又可以顯示 mathjax 的編釋器啦</p>
+<h2 id="hexo-新增文章介紹">hexo 新增文章介紹</h2>
+<p>在 hexo 中所有的文章都是存在 source
+這個資料夾底下，當我們要新增一個文章的時候，可以打下面這個指令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo new [layout] title</span><br></pre></td></tr></table></figure>
+<p>其中這個 layout 預設是 post，而 title 就是文章的標題</p>
+<p>那這個 layout 其實對應的是在 scaffolds 裡面的 .md 檔，它會去找對應的
+layout 去生成出預設排版</p>
+<p>像我就會把 post
+改成以下的樣子，這樣每次新增一個文章的時候，就不用再多花時間打字了：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: &#123;&#123; title &#125;&#125;</span><br><span class="line">date: &#123;&#123; date &#125;&#125;</span><br><span class="line">tags:</span><br><span class="line">categories: </span><br><span class="line">mathjax: false</span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">&lt;!--more--&gt;</span><br></pre></td></tr></table></figure>
+<p>此外在 hexo 的 _config.yml
+中也有底下這一行，更改檔案的名稱，在這邊我加上新增時間，可以更好的來管理文章。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">new_post_name: :title.md</span><br></pre></td></tr></table></figure>
+<p>可以改成 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">new_post_name: :year-:month-:day-:title.md</span><br></pre></td></tr></table></figure></p>
+<h2 id="hexo-首頁-discription">hexo 首頁 discription</h2>
+<p>hexo 首頁會預設把你文章整坨貼上來，我們可以加上一些 discription
+來簡單介紹一下文章概要，精簡版面</p>
+<p>有兩種做法：</p>
+<ol type="1">
+<li>是用 discription</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">discription: </span><br><span class="line">---</span><br></pre></td></tr></table></figure>
+<ol start="2" type="1">
+<li>用 <code>&lt;!--more--&gt;</code></li>
+</ol>
+<h2 id="hexo-next-設定背影透明化">hexo nexT 設定背影、透明化</h2>
+<p>https://hackmd.io/<span class="citation"
+data-cites="Heidi-Liu/hexo-theme">@Heidi-Liu/hexo-theme</span>
+https://blog.csdn.net/qq_43414603/article/details/104113198</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/06/30/手把手-hexo-從零開始教學/" rel="bookmark">手把手 hexo 從零開始教學(一)</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/02/手把手-hexo-從零開始教學-二/" rel="bookmark">手把手 hexo 從零開始教學(二)</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/hexo/" rel="tag"># hexo</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/26/Single%20Image%20Super-Resolution%20via%20a%20Holistic%20Attention%20Network/" rel="prev" title="Single Image Super-Resolution via a Holistic Attention Network">
+      <i class="fa fa-chevron-left"></i> Single Image Super-Resolution via a Holistic Attention Network
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/06/30/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8/" rel="next" title="手把手 hexo 從零開始教學(一)">
+      手把手 hexo 從零開始教學(一) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8%E9%9B%B6"><span class="nav-number">1.</span> <span class="nav-text">手把手 hexo 從零開始教學(零)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#hexo-%E5%B8%B8%E7%94%A8%E6%8C%87%E4%BB%A4"><span class="nav-number">1.1.</span> <span class="nav-text">hexo 常用指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hexo-%E4%B8%8A%E4%BD%BF%E7%94%A8-mathjax-%E8%B8%A9%E9%9B%B7"><span class="nav-number">1.2.</span> <span class="nav-text">hexo 上使用 mathjax 踩雷</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AA%BF%E6%95%99-pandoc"><span class="nav-number">1.3.</span> <span class="nav-text">調教 pandoc</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hexo-%E6%96%B0%E5%A2%9E%E6%96%87%E7%AB%A0%E4%BB%8B%E7%B4%B9"><span class="nav-number">1.4.</span> <span class="nav-text">hexo 新增文章介紹</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hexo-%E9%A6%96%E9%A0%81-discription"><span class="nav-number">1.5.</span> <span class="nav-text">hexo 首頁 discription</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hexo-next-%E8%A8%AD%E5%AE%9A%E8%83%8C%E5%BD%B1%E9%80%8F%E6%98%8E%E5%8C%96"><span class="nav-number">1.6.</span> <span class="nav-text">hexo nexT 設定背影、透明化</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/06/27/%E6%89%8B%E6%8A%8A%E6%89%8B%20hexo%20%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8(%E9%9B%B6)/";
+    this.page.identifier = "2021/06/27/手把手 hexo 從零開始教學(零)/";
+    this.page.title = "手把手 hexo 從零開始教學(零)";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

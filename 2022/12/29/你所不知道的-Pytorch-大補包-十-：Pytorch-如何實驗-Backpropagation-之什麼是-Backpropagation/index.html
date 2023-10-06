@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="常常我們初學 pytroch 的時候都一定會看過下面的程式碼： 12345678for epoch in range(1, epochs+1):  output &#x3D; model(dataset)  loss &#x3D; criterion(output, target)    # wtf  optimizer &#x3D; zero_grad()  loss.backward()  optimizer.step()">
+<meta property="og:type" content="article">
+<meta property="og:title" content="你所不知道的 Pytorch 大補包(十)：Pytorch 如何實做出 Backpropagation 之什麼是 Backpropagation">
+<meta property="og:url" content="https://mushding.space/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B%E4%BB%80%E9%BA%BC%E6%98%AF-Backpropagation/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="常常我們初學 pytroch 的時候都一定會看過下面的程式碼： 12345678for epoch in range(1, epochs+1):  output &#x3D; model(dataset)  loss &#x3D; criterion(output, target)    # wtf  optimizer &#x3D; zero_grad()  loss.backward()  optimizer.step()">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/Y7vRHHO.png">
+<meta property="og:image" content="https://i.imgur.com/vY3QdQ8.png">
+<meta property="og:image" content="https://i.imgur.com/ixuxvfW.png">
+<meta property="og:image" content="https://i.imgur.com/aDZmUmo.jpg">
+<meta property="og:image" content="https://i.imgur.com/tOz7cAL.png">
+<meta property="og:image" content="https://i.imgur.com/bh1nSlm.png">
+<meta property="article:published_time" content="2022-12-28T16:38:57.000Z">
+<meta property="article:modified_time" content="2022-12-28T16:40:20.577Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Pytorch">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/Y7vRHHO.png">
+
+<link rel="canonical" href="https://mushding.space/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B%E4%BB%80%E9%BA%BC%E6%98%AF-Backpropagation/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>你所不知道的 Pytorch 大補包(十)：Pytorch 如何實做出 Backpropagation 之什麼是 Backpropagation | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B%E4%BB%80%E9%BA%BC%E6%98%AF-Backpropagation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          你所不知道的 Pytorch 大補包(十)：Pytorch 如何實做出 Backpropagation 之什麼是 Backpropagation
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2022-12-29 00:38:57 / 修改時間：00:40:20" itemprop="dateCreated datePublished" datetime="2022-12-29T00:38:57+08:00">2022-12-29</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85/" itemprop="url" rel="index"><span itemprop="name">Pytorch 大補包</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B%E4%BB%80%E9%BA%BC%E6%98%AF-Backpropagation/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/12/29/你所不知道的-Pytorch-大補包-十-：Pytorch-如何實驗-Backpropagation-之什麼是-Backpropagation/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>5.8k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>14 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>常常我們初學 pytroch 的時候都一定會看過下面的程式碼：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, epochs+<span class="number">1</span>):</span><br><span class="line">  output = model(dataset)</span><br><span class="line">  loss = criterion(output, target)</span><br><span class="line">  </span><br><span class="line">  <span class="comment"># wtf</span></span><br><span class="line">  optimizer = zero_grad()</span><br><span class="line">  loss.backward()</span><br><span class="line">  optimizer.step()</span><br></pre></td></tr></table></figure>
+<p>好不容易跨出第一步，並剛接觸程式碼的你，一看到這坨鬼東西一定心裡有三個問號…(至少我是這樣啦哈哈。</p>
+<p>keywords: Backpropagation <span id="more"></span></p>
+<p>而大部份網路上的教學都會強調：這個就是 Backpropagation
+喔！也不用太了解它，知道在寫程式時記得要加上它就好了！…</p>
+<p>更進階一點，你是從學校修神經網路相關的課程，也知道 Backpropagation
+背後的數學原理，甚至還用 mathlab python 手刻了一個陽春
+Backpropagation，只是當你轉換到 pytorch
+上來看到程式碼時，不禁覺得…這程式也太簡潔了吧…，只要一行
+<code>loss.backward()</code> 就可以了，這真的可靠嗎？</p>
+<p>而這篇文章就會從最一開始的脈絡，來慢慢解釋：什麼是
+Backpropagation、要怎麼用程式來實作 Backpropagation、pytorch
+倒底幫我們做了什麼？不管你是初心者或是小有經驗的開發者，這些底層冷知識可以幫助你加深對
+pytorch 的感情喔！</p>
+<h3 id="什麼是-backpropagation">什麼是 Backpropagation？</h3>
+<p>在理解什麼是 Backpropagation
+之前，先來複習一下訓練一個神經網路一定要經過的四個步驟：</p>
+<ol type="1">
+<li>Forward Pass 前傳導</li>
+<li>Calculate Gradient 計算梯度</li>
+<li>Backpropagation 後傳導</li>
+<li>Weight update 權重更新</li>
+</ol>
+<p>用一個非常非常簡單的例子來舉例，假設我們要訓練一個可以把輸入資料都都
+x2 的網路，並且定義以下參數</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"></span><br><span class="line"><span class="comment"># x 定義為輸入資料 = 2</span></span><br><span class="line">x = torch.tensor(<span class="number">2</span>, dtype=torch.float32)</span><br><span class="line"></span><br><span class="line"><span class="comment"># y 定義為目標 Ground Truth </span></span><br><span class="line"><span class="comment"># y = x*2 = 2*2 = 4</span></span><br><span class="line">x = torch.tensor(<span class="number">4</span>, dtype=torch.float32)</span><br><span class="line"></span><br><span class="line"><span class="comment"># w 定義為網路中的一個權重值，初始為 0</span></span><br><span class="line">w = torch.tensor(<span class="number">0</span>, dtype=torch.float32)</span><br></pre></td></tr></table></figure>
+<p>把上面的文字及變數定義換成更白話一點的說法就是：我們今天有一個式子
+<code>w * x = y</code> 要找到一個適合的 w 值，使得
+<code>2x = y</code>。</p>
+<p>畫成樹狀圖可以長成如下：</p>
+<p><img src="https://i.imgur.com/Y7vRHHO.png"
+alt="未命名绘图.drawio" /></p>
+<p>當然在現階段我們可以清楚的一看就知道 <code>w = 2</code>
+就是答案了，只是在一般的深度學習中，x
+的多項式可是會達到幾千甚至幾萬的維度，跟本不能用多項式求解的方式來知道答案。那該怎麼辨呢？就使用漸近求解的方式吧！因此才會多一個計算
+Loss 的步驟，Loss
+可以得知，網路輸出的結果與真實的結果倒底相差多遠，透過這個相差多遠的資訊，可以進一步得知網路是否有在往正確的方向學習。</p>
+<p>我們可以把最後的結果套上 Mean Square Error
+(均方誤差)，就是一個相減後平方的公式：<span
+class="math inline">\(\mathcal{L}=(\hat y -y)^2\)</span></p>
+<p>例如當 <code>w = 1</code> 時，我們算出來的 Loss 為 <span
+class="math inline">\((1-2)^2=1\)</span>，可解讀為我們離正確解答的距離還有
+1 (單位)，而隨著 w 的數值越來越接近 2，Loss 也會越來越小，直到趨近於
+0。</p>
+<p>因為我們在網路中加入 Loss，對應的運算樹狀圖也要修改如下：</p>
+<p><img src="https://i.imgur.com/vY3QdQ8.png"
+alt="未命名绘图.drawio" /></p>
+<p>接著我們實際把 xyw 輸入到網路中，並經過一串多項式運算，如同下圖求出
+Loss 為 16，這個步驟就是 Forward Pass 前傳導</p>
+<p><img src="https://i.imgur.com/ixuxvfW.png"
+alt="未命名绘图.drawio" /></p>
+<hr />
+<p>那計算出來的 Loss 是要做什麼的呢？其實這個 Loss
+除了看網路訓練的好不好之外，還可以用來計算梯度並更新每個節點上的權重。</p>
+<p>什麼是梯度呢？高中數學我們會學到，在一個二維曲線上畫一條切線，就代表它的斜率；如果是在物理上，在
+v-t
+圖的一個時間點上找切線斜率，則是代表瞬時速度。只是在深度學習中，我們習慣稱為梯度，英文為
+Gradient，數學符號為 <span class="math inline">\(\nabla\)</span></p>
+<p>那梯度在深度學習中代表的函意又是什麼呢？代表在多維的空間中，某一點的斜率。以三維空間為例子，三維空間就是一個大曲面，這個曲面有凹有凸，就像一個山脈，一個山脈有山頂、有山谷、有平原、有懸崖…，而梯度類比山脈的例子就相當於是當下等高線的坡度</p>
+<p><img src="https://i.imgur.com/aDZmUmo.jpg" alt="image-20220901184131815" style="zoom: 50%;" /></p>
+<p>那我們算梯度要做什麼…？還記得前面我們有說過 Loss
+的值是要…越小越好對吧？代表網路預測的結果跟真實的結果距離越近，我們要怎麼知道如何修改
+w 值才可以使得 Loss
+最小？這個問句可以用山脈的例子同等於：我們怎麼走才可以下山？甚至也可以說：我們怎麼走才可以最快的到山下？</p>
+<p>答案當然是用滑的阿，有爬過山的都知道上山易下山難，下山時多希望自己有個鋼鐵屁屁可以一口氣滑下山
+XD，而深度學習也是利用一模一樣的方法：了解哪裡坡度/梯度最大，就可以快速的滑下山，取得最小的
+Loss，同時也取得預測效果最準的結果</p>
+<hr />
+<p>而要求得梯度只有一種辨法：微分，更詳細的說是偏微分，我們最想要了解最後網路的<strong>Loss
+與變量 w 之間的梯度關系</strong>，因此只要求得 loss 對 w
+的偏微分，就可以知道 w 要怎麼調整效果會最好了，公式如下： <span
+class="math display">\[
+\nabla g = \frac{d\,\mathrm{loss}}{dw}
+\]</span> 但仔細看會發現…上面這個式跟本算不出來阿，為什麼呢？如果我們把
+loss 解壓縮的話： <span class="math display">\[
+\nabla g=\frac{d\,\mathrm{loss}}{dw}=\frac{d(\hat y-y)}{dw}
+\]</span> loss 中間完全沒有 w 變量阿，倒底要怎麼對 w
+做偏微分呢？我們可以先停下腳步來別想要一簇登天直接求得對 w
+做偏微分，我們可以先算出 Local
+Gradient，也就是每一個權重先對自己的變量求梯度 (loss 先對 s、s 先對
+<span class="math inline">\(\hat y\)</span>、<span
+class="math inline">\(\hat y\)</span> 先對 w)： <span
+class="math display">\[
+\frac{d\,\mathrm{loss}}{ds} = \frac{ds^2}{ds}=2s\\
+\frac{ds}{d\hat y}=\frac{d(\hat y-y)}{d\hat y}=1\\
+\frac{d\hat y}{dw}=\frac{d(x\cdot w)}{dw}=x
+\]</span> 更詳細如下圖：</p>
+<p><img src="https://i.imgur.com/tOz7cAL.png" alt="test" /></p>
+<p>再仔細看看上面的 Local
+Gradient，咦…好像怎麼有規律？！這不就是傳說中的 chain rule 嗎？ <span
+class="math display">\[
+\nabla
+g=\frac{d\,\mathrm{loss}}{dw}=\frac{d\,\mathrm{loss}}{ds}\frac{ds}{d\hat
+y}\frac{d\hat y}{dw}
+\]</span> 也就是說當我們在做 Local Gradient
+的時候，其實就是在幫我們最感興趣的<strong>loss 對 w
+的偏微分</strong>在計算它的 chain rule，而這個透過 chain rule
+一層一層慢慢的找到值的方式，就是 Backpropagation <span
+class="math display">\[
+\nabla
+g=\frac{d\,\mathrm{loss}}{dw}=\frac{d\,\mathrm{loss}}{ds}\frac{ds}{d\hat
+y}\frac{d\hat y}{dw}=2s\cdot 1 \cdot x=-16
+\]</span> <img src="https://i.imgur.com/bh1nSlm.png" alt="test" /></p>
+<p>接著我們再將算出來 Backpropagation
+的值，簡單的利用以下的公式去更新每一個權重，其中 <span
+class="math inline">\(\nabla g\)</span> 為 Backpropagation 的結果、<span
+class="math inline">\(\eta\)</span> 為 learning rate 控制大小用： <span
+class="math display">\[
+w_{t+1}=w_t-\eta\nabla g
+\]</span></p>
+<h3 id="要怎麼用程式來實作-backpropagation">要怎麼用程式來實作
+Backpropagation？</h3>
+<p>以下的例子會回歸最原本的初心，不用高級的 pytorch 工具，而是使用 numpy
+來達成以上四個基本操作</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line"><span class="comment"># 定義：輸入 x=2，目標 y=4，變量 w=0</span></span><br><span class="line">x = np.array([<span class="number">2</span>], dtype=np.float32)</span><br><span class="line">y = np.array([<span class="number">4</span>], dtype=np.float32)</span><br><span class="line">w = <span class="number">0.0</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 定義網路前傳導的式子</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">x</span>):</span></span><br><span class="line">    <span class="keyword">return</span> x * w</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 MSE 均方差來做為 Loss</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">loss</span>(<span class="params">y_hat, y</span>):</span></span><br><span class="line">    <span class="keyword">return</span> ((y_hat - y)**<span class="number">2</span>).mean()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 計算 loss 對變數 w 的偏微分</span></span><br><span class="line"><span class="comment"># 這是是直接把式子展開，直接計算偏微分 (沒有用到 chain rule 的概念)</span></span><br><span class="line"><span class="comment"># dloss/dw = d(w*x - y)^2/dw = 2x (w*x - y)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gradient</span>(<span class="params">x, y, y_hat</span>):</span></span><br><span class="line">    <span class="keyword">return</span> np.dot(<span class="number">2</span>*x, y_hat-y).mean()</span><br><span class="line"></span><br><span class="line">epochs = <span class="number">100</span></span><br><span class="line">lr = <span class="number">0.01</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 開始訓練</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Start Training...&quot;</span>)</span><br><span class="line"><span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, epochs+<span class="number">1</span>):</span><br><span class="line">    <span class="comment"># (1) Foward Pass 前傳導</span></span><br><span class="line">    y_hat = forward(x)</span><br><span class="line">    <span class="comment"># (1.5) 計算 Loss</span></span><br><span class="line">    l = loss(y_hat, y)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (2, 3) 計算 Local Gradient 以及 Backpropagation</span></span><br><span class="line">    dw = gradient(x, y, y_hat)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (4) 更新權重 w</span></span><br><span class="line">    w -= lr * dw</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;epoch: <span class="subst">&#123;epoch&#125;</span>, loss: <span class="subst">&#123;l:<span class="number">.8</span>f&#125;</span>, w: <span class="subst">&#123;w:<span class="number">.3</span>f&#125;</span>, dw: <span class="subst">&#123;dw:<span class="number">.3</span>f&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"># 印出來的結果</span><br><span class="line">Start Training...</span><br><span class="line">epoch: 1, loss: 16.00000000, w: 0.160, dw: -16.000</span><br><span class="line">epoch: 2, loss: 13.54240036, w: 0.307, dw: -14.720</span><br><span class="line">epoch: 3, loss: 11.46228790, w: 0.443, dw: -13.542</span><br><span class="line">epoch: 4, loss: 9.70168018, w: 0.567, dw: -12.459</span><br><span class="line">epoch: 5, loss: 8.21150303, w: 0.682, dw: -11.462</span><br><span class="line">epoch: 6, loss: 6.95021534, w: 0.787, dw: -10.545</span><br><span class="line">epoch: 7, loss: 5.88266134, w: 0.884, dw: -9.702</span><br><span class="line">epoch: 8, loss: 4.97908545, w: 0.974, dw: -8.926</span><br><span class="line">epoch: 9, loss: 4.21429777, w: 1.056, dw: -8.212</span><br><span class="line">epoch: 10, loss: 3.56698155, w: 1.131, dw: -7.555  &lt;- w=1.131</span><br></pre></td></tr></table></figure>
+<p>從印出來的結果可以看到，在 epoch=1 的時候，dw
+也就是我們剛剛算出來的值 -16 是完全正確的，接著 dw 值會往 0 靠近，而
+Loss 的數值也慢慢降低，以及 w 的值，從 0 慢慢的往答案 2 靠近</p>
+<p>但可能會覺得這個訓練效果也太不好了吧…搞了這麼多數學的東西，結果訓練出來的
+w 竟然離 2 還很遠！沒關系！這個網路還有很多可以優化的地方：像是增加
+epoch 數量、或是增加資料集，都可以使網路效果變更好喔！</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定義：輸入 x，目標 y，新增資料集至 4 組</span></span><br><span class="line">x = np.array([<span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">8</span>], dtype=np.float32)</span><br><span class="line">y = np.array([<span class="number">4</span>, <span class="number">8</span>, <span class="number">12</span>, <span class="number">16</span>], dtype=np.float32)</span><br><span class="line">...</span><br><span class="line"><span class="comment"># 因為資料不只一組，由於 Gradient 不能是一個 Vector (向量) 必需要是一個 Scalar (純量)，所以要取 mean 平均</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gradient</span>(<span class="params">x, y, y_hat</span>):</span></span><br><span class="line">    <span class="keyword">return</span> np.dot(<span class="number">2</span>*x, y_hat-y).mean()  &lt;- 這裡 mean 的作用</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Start Training...</span><br><span class="line">epoch: 1, loss: 30.00000000, w: 1.200, dw: -120.000</span><br><span class="line">epoch: 2, loss: 4.79999924, w: 1.680, dw: -48.000</span><br><span class="line">epoch: 3, loss: 0.76800019, w: 1.872, dw: -19.200</span><br><span class="line">epoch: 4, loss: 0.12288000, w: 1.949, dw: -7.680</span><br><span class="line">epoch: 5, loss: 0.01966083, w: 1.980, dw: -3.072</span><br><span class="line">epoch: 6, loss: 0.00314570, w: 1.992, dw: -1.229</span><br><span class="line">epoch: 7, loss: 0.00050332, w: 1.997, dw: -0.492</span><br><span class="line">epoch: 8, loss: 0.00008053, w: 1.999, dw: -0.197</span><br><span class="line">epoch: 9, loss: 0.00001288, w: 1.999, dw: -0.079</span><br><span class="line">epoch: 10, loss: 0.00000206, w: 2.000, dw: -0.031  &lt;- YA, w=2 了！</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-一-：從官方-mnist-source-code-來學習-Pytorch/" rel="bookmark">你所不知道的 Pytorch 大補包(一)：從官方 mnist source code 來學習 Pytorch</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-三-：網路模型-torch-nn-Module/" rel="bookmark">你所不知道的 Pytorch 大補包(三)：網路模型 torch.nn.Module</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-二-：Dataset-DataLoader/" rel="bookmark">你所不知道的 Pytorch 大補包(二)：Dataset DataLoader</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/你所不知道的-Pytorch-大補包-四-：資料擴增、前處理-torchvision-transforms/" rel="bookmark">你所不知道的 Pytorch 大補包(四)：資料擴增、前處理 torchvision.transforms</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/29/你所不知道的-Pytorch-大補包-七-：訓練小技巧-AMP-混合精度/" rel="bookmark">你所不知道的 Pytorch 大補包(七)：訓練小技巧 AMP 混合精度</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Pytorch/" rel="tag"># Pytorch</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E4%B9%9D-%EF%BC%9A%E4%B8%80%E4%BA%9B-optimizer-%E6%95%B4%E7%90%86/" rel="prev" title="你所不知道的 Pytorch 大補包(九)：一些 optimizer 整理">
+      <i class="fa fa-chevron-left"></i> 你所不知道的 Pytorch 大補包(九)：一些 optimizer 整理
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81%E4%B8%80-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B-Pytorch-AutoGrad-%E5%B9%AB%E6%88%91%E5%80%91%E5%81%9A%E4%BA%86%E4%BB%80%E9%BA%BC%E4%BA%8B%EF%BC%9F/" rel="next" title="你所不知道的 Pytorch 大補包(十一)：Pytorch 如何實驗 Backpropagation 之 Pytorch AutoGrad 幫我們做了什麼事？">
+      你所不知道的 Pytorch 大補包(十一)：Pytorch 如何實驗 Backpropagation 之 Pytorch AutoGrad 幫我們做了什麼事？ <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E9%BA%BC%E6%98%AF-backpropagation"><span class="nav-number">1.</span> <span class="nav-text">什麼是 Backpropagation？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A6%81%E6%80%8E%E9%BA%BC%E7%94%A8%E7%A8%8B%E5%BC%8F%E4%BE%86%E5%AF%A6%E4%BD%9C-backpropagation"><span class="nav-number">2.</span> <span class="nav-text">要怎麼用程式來實作
+Backpropagation？</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/12/29/%E4%BD%A0%E6%89%80%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-Pytorch-%E5%A4%A7%E8%A3%9C%E5%8C%85-%E5%8D%81-%EF%BC%9APytorch-%E5%A6%82%E4%BD%95%E5%AF%A6%E9%A9%97-Backpropagation-%E4%B9%8B%E4%BB%80%E9%BA%BC%E6%98%AF-Backpropagation/";
+    this.page.identifier = "2022/12/29/你所不知道的-Pytorch-大補包-十-：Pytorch-如何實驗-Backpropagation-之什麼是-Backpropagation/";
+    this.page.title = "你所不知道的 Pytorch 大補包(十)：Pytorch 如何實做出 Backpropagation 之什麼是 Backpropagation";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

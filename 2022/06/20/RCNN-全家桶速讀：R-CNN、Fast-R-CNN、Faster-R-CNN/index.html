@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="碩論題目下來了，是有關於 3D 的瑕疵辨識，根據前面學長姐的題目來看，看起來這個題目偏向分類任務，可能是瑕疵的二分類吧…，不管題目是什麼，還是多看看一些論文為未來鋪路吧 XD，搞不好哪一天真的用上了。 接下來就先來看看 Object Detection 目標偵測的元老：RCNN 系列吧 keywords: R-CNN、Fast R-CNN、Faster R-CNN、Object Detection">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RCNN 全家桶速讀：R-CNN、Fast R-CNN、Faster R-CNN">
+<meta property="og:url" content="https://mushding.space/2022/06/20/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AR-CNN%E3%80%81Fast-R-CNN%E3%80%81Faster-R-CNN/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="碩論題目下來了，是有關於 3D 的瑕疵辨識，根據前面學長姐的題目來看，看起來這個題目偏向分類任務，可能是瑕疵的二分類吧…，不管題目是什麼，還是多看看一些論文為未來鋪路吧 XD，搞不好哪一天真的用上了。 接下來就先來看看 Object Detection 目標偵測的元老：RCNN 系列吧 keywords: R-CNN、Fast R-CNN、Faster R-CNN、Object Detection">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/uWG7Izw.png">
+<meta property="og:image" content="https://i.imgur.com/BPQPRjE.png">
+<meta property="og:image" content="https://i.imgur.com/ONnVaHs.png">
+<meta property="og:image" content="https://i.imgur.com/1u91AnU.png">
+<meta property="og:image" content="https://i.imgur.com/R6L3Y4N.png">
+<meta property="og:image" content="https://i.imgur.com/cLGmQkc.png">
+<meta property="og:image" content="https://i.imgur.com/pK8N6lx.png">
+<meta property="og:image" content="https://i.imgur.com/jJpTWSr.png">
+<meta property="article:published_time" content="2022-06-20T12:20:33.000Z">
+<meta property="article:modified_time" content="2022-06-24T01:11:47.388Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Object detection">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/uWG7Izw.png">
+
+<link rel="canonical" href="https://mushding.space/2022/06/20/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AR-CNN%E3%80%81Fast-R-CNN%E3%80%81Faster-R-CNN/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>RCNN 全家桶速讀：R-CNN、Fast R-CNN、Faster R-CNN | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/06/20/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AR-CNN%E3%80%81Fast-R-CNN%E3%80%81Faster-R-CNN/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          RCNN 全家桶速讀：R-CNN、Fast R-CNN、Faster R-CNN
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-06-20 20:20:33" itemprop="dateCreated datePublished" datetime="2022-06-20T20:20:33+08:00">2022-06-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-06-24 09:11:47" itemprop="dateModified" datetime="2022-06-24T09:11:47+08:00">2022-06-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/06/20/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AR-CNN%E3%80%81Fast-R-CNN%E3%80%81Faster-R-CNN/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/06/20/RCNN-全家桶速讀：R-CNN、Fast-R-CNN、Faster-R-CNN/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>4.1k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>10 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>碩論題目下來了，是有關於 3D
+的瑕疵辨識，根據前面學長姐的題目來看，看起來這個題目偏向分類任務，可能是瑕疵的二分類吧…，不管題目是什麼，還是多看看一些論文為未來鋪路吧
+XD，搞不好哪一天真的用上了。</p>
+<p>接下來就先來看看 Object Detection 目標偵測的元老：RCNN 系列吧</p>
+<p>keywords: R-CNN、Fast R-CNN、Faster R-CNN、Object Detection
+<span id="more"></span></p>
+<h2 id="什麼是-object-detection">什麼是 Object detection</h2>
+<p>在介紹之前我們先來看看傳統的深度學習電腦視覺任務，可大概分成下列 4
+個任務：分類、定位、偵測、分割 <img
+src="https://i.imgur.com/OsA93iB.png" alt="Image" /></p>
+<p>所謂分類是指：找出影像中的目標物體類別；定位是指要找出目標物體所在的空間範圍；而偵測是分類
++ 定位的結合，且有時還會加上多類別的任務；最後一個分割同樣也是分類 +
+定位，它會描出物體的輪廓，不過它比較像「像素」級別的分類</p>
+<p>分類的目標為輸出 k 個不同的物體的類別，通常使用 cross entropy 算出 0
+~ 1 之間的機率，來表示某類別的可能性；定位的目標為輸出 4 個值 (x, y, w,
+h) 用來表示框框的 (起始點、長寬)，通常使用 IoU 來算出交集的條件機率 0 ~
+1</p>
+IoU 的定義為：兩框框的 聯集/交集，如下圖。通常我們定義 IoU &gt; 0.5
+就是一個不錯的效果 <img src="https://i.imgur.com/uWG7Izw.png"
+style="width:50.0%" alt="Image" />
+<p align="center">
+IoU 定義
+</p>
+<p>我們已經定義好了 IoU
+後，但是我們要怎麼在一張影像上選出框呢？一個最直覺的方法是窮舉暴力，把所有
+pixel 的框框排列組合一遍…？聽起來效率就超低，於是就有了後續的 Object
+detection 來解決這一系列問題…</p>
+<h2 id="r-cnn">R-CNN</h2>
+<p>原 paper 連結：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1311.2524.pdf">Rich
+feature hierarchies for accurate object detection and semantic
+segmentation</a></p>
+<h3 id="網路架構">網路架構</h3>
+<p>2013 年提出的 R-CNN 是第一個使用 CNN 來實作 Object detection
+的網路架構</p>
+<img src="https://i.imgur.com/BPQPRjE.png" alt="Image" />
+<p align="center">
+R-CNN 完整架構圖
+</p>
+<h3 id="selective-search">Selective Search</h3>
+<p>提出 Selective Search，它是一個改善窮舉的演算法，一張影像經過
+Selective Search 後會生成出 2k 個 Region Proposal。這個 Selective Search
+因為是傳統演算法的緣故，不能放進 GPU 中加速。</p>
+<img src="https://i.imgur.com/ONnVaHs.png" alt="Image" />
+<p align="center">
+Selective Search 示意圖，在影像上有規律的找出許多框框
+</p>
+<p>接著再把圖片 warped (大小弄成一樣)，好放進後續 CNN(AlexNet)
+做訓練。這個 CNN 相當於特徵提取器 backbone，負責找出 wraped
+過後的框框的特徵，再用 SVM 做分類
+(跟現在直接全連結不大一樣)，雖然這些步驟現在看起有點過時，但在那個年代效果超好。</p>
+<h3 id="problems-of-r-cnn">Problems of R-CNN</h3>
+<ol type="1">
+<li>每一個 Region Proposal 都要經過一次 CNN 運算 -&gt; 超極慢</li>
+<li>可以很明顯發現網路是兩階段：(先用 Selective Search、再用 CNN
+找特徵)，不是 end-to-end 架構</li>
+<li>分類、BBox 是分開的網路，Loss 也是個別計算</li>
+<li>找出來的 Region Proposal 要事先存在本地，浪費硬碟空間</li>
+</ol>
+<h2 id="fast-r-cnn">Fast R-CNN</h2>
+<p>原 paper 連結：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1504.08083.pdf">Fast
+R-CNN</a></p>
+<h3 id="網路架構-1">網路架構</h3>
+<p>2015 年又提出 Fast R-CNN，目的在改善 R-CNN 太慢的問題，首先把 Region
+Proposal 改名為 RoI (Region of Interest 感興趣的範圍)。及提出 RoI
+Pooling 使得 Fast R-CNN 在後半提取特徵的部份皆是 CNN 架構。</p>
+<p><img src="https://i.imgur.com/1u91AnU.png" alt="Image" /></p>
+<h3 id="cnn-權重共享">CNN 權重共享</h3>
+<p>網路先把整張影像放進「全」CNN 網路 (VGG) 中找特徵，接著找出 RoI
+的範圍 (這裡還是用特別的演算法獨立先算出來的)，由於 CNN feature map
+的特性，我們可以先找出 RoI 在原圖的座標，接著直接映射到 feature map
+上，如圖左邊的紅框框，這麼做的好處是：CNN 權重是共享的，且只需做一次
+CNN，不需要有幾個 RoI 就要做幾次 CNN</p>
+<p>再找一次 RoI -&gt; RoI Pooling 作用在於把大小不同的影像變成一樣大小
+multi-task loss，把分類、BBox 的 Loss 合併在一起 end-to-end model</p>
+<h3 id="roi-pooling">RoI Pooling</h3>
+<p>RoI Pooling 的目的與 R-CNN warped
+相同，皆是把影像變成相同大小，只是原本的做法是直接
+scaling，缺點也很明顯：影像比例嚴重失真。改進的方法是使用 max pooling
+來取代 scaling。</p>
+<p>詳細做法：pooling 取的範圍不再是一個正方型，(例 2x2 pooling，就是在
+2x2 選一個最大值替代)，改成一個長方型，它的長寬是：RoI
+除以目標大小，去小數。對，其實 RoI Pooling
+簡單說就是在去小數而已，也因去了小數，會讓資訊不準
+(多框一點，少框一點)。</p>
+<p><img src="https://i.imgur.com/R6L3Y4N.png" alt="Image" /></p>
+<p>更多詳細介紹可參考以下這篇文章 <a
+target="_blank" rel="noopener" href="https://erdem.pl/2020/02/understanding-region-of-interest-ro-i-pooling">Understanding
+Region of Interest (RoI Pooling)</a>。也可直接記結論：RoI Pooling
+就是利用不規則的 pooling 來達到輸出影像大小皆相同</p>
+<h3 id="multi-task-loss">multi-task loss</h3>
+<p>把下游的分類、BBox 迴歸任務合併在一起，設計出多任務的
+Loss，其實就是把兩個不同任務的 Loss
+直接相加，這樣做的好處是速度快，只需跑一次網路兩個一起訓練，缺點就是理論上會比分別算的網路不精確一些</p>
+<h3 id="problems-of-fast-rcnn">Problems of Fast RCNN</h3>
+<p>還是用 selective search 來決定 RoI，這個還是很花時間…</p>
+<h2 id="faster-rcnn">Faster RCNN</h2>
+<p>原 paper 連結：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1506.01497.pdf">Faster
+R-CNN: Towards Real-Time Object Detection with Region Proposal
+Networks</a></p>
+<h3 id="網路架構-2">網路架構</h3>
+<p><img src="https://i.imgur.com/cLGmQkc.png" style="width:50.0%"
+alt="Image" /></p>
+<p>提出 RPN (region proposal network) 專來解決 selective search
+無法加速的問題。雖然說 selective search 及 RPN
+在運算複雜度上並沒相差太多，但 RPN 因是神經網路形式所以可用 GPU
+加速。</p>
+<p>網路架構大多改動前半段，新增 RPN
+用來找出框框，且這個框有個特別的名字：Anchor
+(中文可翻錨點、先驗框)。後半段基本上沒什麼變動了</p>
+<h3 id="rpn">RPN</h3>
+<p>RPN 的輸入是來自 CNN 去掉全連接層的 Feature map，輸出同樣為 RoI</p>
+<p>Anchor 先驗框，可看成預先列出幾個，事先設計好的框
+(不同長寬比例、不同大小比例)，再依據 Anchor 微調，找出真正的框</p>
+<p><img src="https://i.imgur.com/pK8N6lx.png" style="width:50.0%"
+alt="Image" /></p>
+<p>RPN 的流程如下：會先用預先設計好的 Anchor 來當 window，依據一定的
+stride 在 feature map 上移動 (設 stride 是為了更有效率的灑網)，接著經過
+RoI Pooling 把影像變為一樣再放進 CNN 中，最後一樣有兩個任務，一是 2k
+的分類任務 (背景、目標物)、一是 4k 的 BBox (x, y, h, w)</p>
+<p><img src="https://i.imgur.com/jJpTWSr.png" style="width:50.0%"
+alt="Image" /></p>
+<p>這還沒結束喔，記得以上步驟都只是 RPN 而已，接著會把 4k 的 RoI
+結果先做一遍 IoU，如果 IoU &gt; 0.7 當做正樣本、如果 IoU &lt; 0.3
+當做負樣本，其餘區間直接捨棄。</p>
+<p>接著會把 RPN 所生出來的 RoI 再用 Fast R-CNN 一模一樣方法做下去 (經
+VGG 再有 k 分類任務及 4k BBox 任務)</p>
+<h3 id="loss">Loss</h3>
+<p><span class="math display">\[
+\begin{align}
+\mathcal{L}(\{p_i\},\{t_i\})=\frac{1}{N_{cls}}\sum_{i}L_{cls}(p_i,p_i^*)+\lambda
+\frac{1}{N_{reg}}\sum_{i}p_i^*\mathcal{L}_{reg}(t_i,t_i^*)
+\end{align}
+\]</span></p>
+<p>式子分為左右兩邊，左邊為分類任務 Loss，簡單做了一個 cross
+entropy，而右邊為 BBox 的迴歸 loss，迴歸 loss 中的 <span
+class="math inline">\(t\)</span> 可再展開如下：</p>
+<p>其中 <span class="math inline">\(x_a\)</span> 為 Anchor、<span
+class="math inline">\(x\)</span> 是 predict 預測 Box、<span
+class="math inline">\(x^*\)</span> 是 ground truth</p>
+<p><span class="math display">\[
+\begin{align}
+t_x = (x-x_a)/w_a&amp;,\quad t_y = (y-y_a)/h_a \\
+t_w = \log(w/w_a)&amp;, \quad t_h = \log(h/h_a) \\
+t_x^* = (x^*-x_a)/w_a&amp;,\quad t_{y^*} = (y^*-y_a)/h_a \\
+t_w^* = \log(w^*/w_a)&amp;, \quad t_h^* = \log(h^*/h_a)
+\end{align}
+\]</span></p>
+<p>所以 <span class="math inline">\(t\)</span> 的意思就是「預測」的 BBox
+與「Anchor」 的 BBox 的誤差，而 <span class="math inline">\(t^*\)</span>
+的意思就是「Anchor」 的 BBox 與 「Ground truth」 的誤差，而 <span
+class="math inline">\(t\)</span> 與 <span
+class="math inline">\(t^*\)</span> 做 Loss
+就代表它們兩個越像越好，我理解為有點像在 Anchor 與 Ground truth
+中間找個中間框，距離到它們兩個剛好相等</p>
+<p>最後還加入了 smooth label 來平滑化標籤，避免網路難以收斂</p>
+<h2 id="論語">論語</h2>
+<p>以上大概介紹了 R-CNN
+家族演變史，可看到網路架構不斷的往加速發展，且最後也實驗了全部是神經網路的
+end-to-end 架構，不需要再分兩個不同的網路來訓練了。</p>
+<h2 id="reference">Reference</h2>
+<p><a
+target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=M1mN03REGU8&amp;t=356s&amp;ab_channel=AshingTsai">Introduction
+of RCNN,Fast RCNN,Faster RCNN
+中文，講得很清楚，大部份是參考這個影片</a></p>
+<p><a
+target="_blank" rel="noopener" href="http://cs231n.stanford.edu/slides/2017/cs231n_2017_lecture11.pdf">某線上課程
+ppt</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://erdem.pl/2020/02/understanding-region-of-interest-ro-i-pooling">RoI
+Pooling 超圖解</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/06/22/RCNN-全家桶速讀：Mask-R-CNN/" rel="bookmark">RCNN 全家桶速讀：Mask R-CNN</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Object-detection/" rel="tag"># Object detection</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/09/BERT-%E9%80%9F%E8%AE%80-Pre-training-of-Deep-Bidirectional-Transformers-for-Language-Understanding-%E7%82%BA%E8%87%AA%E7%9B%A3%E7%9D%A3%E5%BC%8F%E5%AD%B8%E7%BF%92%E6%89%93%E4%B8%8B%E6%A8%99%E7%AB%BF/" rel="prev" title="BERT 速讀 - Pre-training of Deep Bidirectional Transformers for Language Understanding - 為自監督式學習打下標竿">
+      <i class="fa fa-chevron-left"></i> BERT 速讀 - Pre-training of Deep Bidirectional Transformers for Language Understanding - 為自監督式學習打下標竿
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/06/22/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AMask-R-CNN/" rel="next" title="RCNN 全家桶速讀：Mask R-CNN">
+      RCNN 全家桶速讀：Mask R-CNN <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E9%BA%BC%E6%98%AF-object-detection"><span class="nav-number">1.</span> <span class="nav-text">什麼是 Object detection</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#r-cnn"><span class="nav-number">2.</span> <span class="nav-text">R-CNN</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">2.1.</span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#selective-search"><span class="nav-number">2.2.</span> <span class="nav-text">Selective Search</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#problems-of-r-cnn"><span class="nav-number">2.3.</span> <span class="nav-text">Problems of R-CNN</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fast-r-cnn"><span class="nav-number">3.</span> <span class="nav-text">Fast R-CNN</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B-1"><span class="nav-number">3.1.</span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cnn-%E6%AC%8A%E9%87%8D%E5%85%B1%E4%BA%AB"><span class="nav-number">3.2.</span> <span class="nav-text">CNN 權重共享</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#roi-pooling"><span class="nav-number">3.3.</span> <span class="nav-text">RoI Pooling</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#multi-task-loss"><span class="nav-number">3.4.</span> <span class="nav-text">multi-task loss</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#problems-of-fast-rcnn"><span class="nav-number">3.5.</span> <span class="nav-text">Problems of Fast RCNN</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#faster-rcnn"><span class="nav-number">4.</span> <span class="nav-text">Faster RCNN</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B-2"><span class="nav-number">4.1.</span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rpn"><span class="nav-number">4.2.</span> <span class="nav-text">RPN</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#loss"><span class="nav-number">4.3.</span> <span class="nav-text">Loss</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AB%96%E8%AA%9E"><span class="nav-number">5.</span> <span class="nav-text">論語</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/06/20/RCNN-%E5%85%A8%E5%AE%B6%E6%A1%B6%E9%80%9F%E8%AE%80%EF%BC%9AR-CNN%E3%80%81Fast-R-CNN%E3%80%81Faster-R-CNN/";
+    this.page.identifier = "2022/06/20/RCNN-全家桶速讀：R-CNN、Fast-R-CNN、Faster-R-CNN/";
+    this.page.title = "RCNN 全家桶速讀：R-CNN、Fast R-CNN、Faster R-CNN";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

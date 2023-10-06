@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="2020 是個 Transformer 在 CV 界大放異彩的一年，在大學時期不知為何的學了一堆 NLP 領域的東西、但是因著興趣研究所選擇念 CV 的我，一聽到這個消息我有點小開心阿，竟然有一天可以把我學到的這兩個東西結合在一起，真是太神奇啦啦。於是打算在未來研究所試試看往這個方向研究…。這篇是 Transformer 系列文的第一篇，會來先了解最基本也是一切的開始：self attention">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NLP 與 CV 的結合：self attention 以及 Transformer">
+<meta property="og:url" content="https://mushding.space/2021/07/07/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9Aself-attention-%E4%BB%A5%E5%8F%8A-Transformer/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="2020 是個 Transformer 在 CV 界大放異彩的一年，在大學時期不知為何的學了一堆 NLP 領域的東西、但是因著興趣研究所選擇念 CV 的我，一聽到這個消息我有點小開心阿，竟然有一天可以把我學到的這兩個東西結合在一起，真是太神奇啦啦。於是打算在未來研究所試試看往這個方向研究…。這篇是 Transformer 系列文的第一篇，會來先了解最基本也是一切的開始：self attention">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/gLA1fus.png">
+<meta property="og:image" content="https://i.imgur.com/LwKMHeF.png">
+<meta property="og:image" content="https://i.imgur.com/wvp9Wv1.png">
+<meta property="og:image" content="https://i.imgur.com/WJbnu3a.png">
+<meta property="og:image" content="https://i.imgur.com/i6mAG9s.png">
+<meta property="og:image" content="https://i.imgur.com/UHazpwA.png">
+<meta property="og:image" content="https://i.imgur.com/tGK6dQb.png">
+<meta property="og:image" content="https://i.imgur.com/tsn4mMZ.png">
+<meta property="og:image" content="https://i.imgur.com/gLA1fus.png">
+<meta property="og:image" content="https://i.imgur.com/ASydltz.png">
+<meta property="og:image" content="https://i.imgur.com/ECf9hPH.png">
+<meta property="og:image" content="https://i.imgur.com/RYXM1sz.png">
+<meta property="article:published_time" content="2021-07-07T08:10:44.000Z">
+<meta property="article:modified_time" content="2021-09-02T06:44:39.060Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/gLA1fus.png">
+
+<link rel="canonical" href="https://mushding.space/2021/07/07/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9Aself-attention-%E4%BB%A5%E5%8F%8A-Transformer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>NLP 與 CV 的結合：self attention 以及 Transformer | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/07/07/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9Aself-attention-%E4%BB%A5%E5%8F%8A-Transformer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NLP 與 CV 的結合：self attention 以及 Transformer
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-07-07 16:10:44" itemprop="dateCreated datePublished" datetime="2021-07-07T16:10:44+08:00">2021-07-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2021-09-02 14:44:39" itemprop="dateModified" datetime="2021-09-02T14:44:39+08:00">2021-09-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/07/07/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9Aself-attention-%E4%BB%A5%E5%8F%8A-Transformer/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>4.5k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>11 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>2020 是個 Transformer 在 CV
+界大放異彩的一年，在大學時期不知為何的學了一堆 NLP
+領域的東西、但是因著興趣研究所選擇念 CV
+的我，一聽到這個消息我有點小開心阿，竟然有一天可以把我學到的這兩個東西結合在一起，真是太神奇啦啦。於是打算在未來研究所試試看往這個方向研究…。這篇是
+Transformer 系列文的第一篇，會來先了解最基本也是一切的開始：self
+attention 以及 Transformer，這兩個開山始祖。</p>
+<p>keywords: self attention, Transformer <span id="more"></span></p>
+<h2 id="transformer-架構初看">Transformer 架構初看</h2>
+<p>這系列的重點是在 Transformer 上，所以我們先來看看 Transformer
+的架構長什麼樣，再來一步一步拆解其中的區塊。(一關一關來過 w)</p>
+<p><img src="https://i.imgur.com/gLA1fus.png"
+alt="image-20210707231927724" /></p>
+<h2 id="self-attention">self attention</h2>
+<p>在研究所上課期間，有聽到老師介紹 self attention GAN
+這篇論文，因此我對 self attention 的第一印象是來自 CV 的觀念，attention
+是用來尋找圖片中重要的像素值，並且加以放大。但是在 NLP 領域中，self
+attention 的觀念有那麼一點點的不同，但基本的大觀念是相通的，以下是我對在
+NLP 中 self attention 意義的理解：</p>
+<p>self attention 的誕生是為了解決 RNN 不太能「平行處理」的問題
+(parallel problem)，什麼是平行處理呢？通常在 RNN 中對定一個 input
+會對應一個 output，接著把 output 當做是下一個值的
+input，接著重複以上的動作。可以發現一個問題我們沒有辨法一次性的把所有
+input 一口氣放到 RNN 中，一口氣生出一串 output，而這個就是 self
+attention 所以解決的問題。</p>
+<p><img src="https://i.imgur.com/LwKMHeF.png"
+alt="image-20210707163517881" /></p>
+<p>self attention 提供的解法最核心的想法是：用算的！把每一個 input 與
+input 之間的關系都算一遍！在 NLP 中 self attention 拆成的三個 vector
+都有它對應的名字：query、key、value。</p>
+<ul>
+<li>query 指的是 -&gt; 要去與其它配對的</li>
+<li>key 指的是 -&gt; 被配對的</li>
+<li>value 指的是 -&gt; 放大縮小配對關系</li>
+</ul>
+<p>以下是計算步驟 <img src="https://i.imgur.com/wvp9Wv1.png"
+alt="image-20210707163950107" /></p>
+<ul>
+<li>第一步：
+<ul>
+<li>將 query 和 key 計算相似度得到一個共變異數矩陣</li>
+<li>可以是內積，cosine 相似度，MLP</li>
+</ul></li>
+<li>第二步：
+<ul>
+<li>使用 softmax 把權重歸一化</li>
+</ul></li>
+<li>第三步：
+<ul>
+<li>不像 SE 是直接把值乘回原圖</li>
+<li>這邊的做法是使用「加權求和」</li>
+<li>把 attention map 中的每一行，與原圖的每一行做線性組合</li>
+</ul></li>
+</ul>
+<p>與 CV 的不太相同，CV 做 self attention 是要加強特徵圖中重要的地方，而
+NLP 中做 self attention 是為了可以得到一個類似 RNN
+提取特徵的網路架構。</p>
+<h2 id="multi-head-self-attention">Multi-head Self attention</h2>
+<p>在 Transtormer 中使用的 Self attention 是 Multi-head Self
+attention，它的觀念也很簡單，就是把 query、key、value 再多用一個矩陣分為
+<span class="math inline">\(q1, q2, k1, k2, v1, v2\)</span>，因此最後的
+<span class="math inline">\(b\)</span> 會是兩個結果，如下圖：</p>
+<p><img src="https://i.imgur.com/WJbnu3a.png"
+alt="image-20210707165016203" /></p>
+<p>而最後的結果 <span class="math inline">\(b\)</span> 會把 <span
+class="math inline">\(b1, b2\)</span> 維度相加，再經一個調整維度的 <span
+class="math inline">\(W\)</span> 使回複成與輸入相同的維度。如下圖：</p>
+<p><img src="https://i.imgur.com/i6mAG9s.png"
+alt="image-20210707165317159" /></p>
+<p>使用 Multi-head Self attention 最直覺得差異就是多了一個 <span
+class="math inline">\(b\)</span> 在這裡稱為一個 head，每多一個 head
+等同於多一個訓練不同側重點的 attention，例如 2 個 head
+的話，可能一個訓練是全域訊息，一個訓練是局部訊息，越多的 head
+線性組合的空間也就越大。</p>
+<h2 id="positional-encoding">Positional Encoding</h2>
+<p>在 self attention 中會發現一個問題，就是當輸入字串是「A 打了 B」與「B
+打了 A」機器會把它們當成是同一個輸入，因為 self attention 並沒有考慮
+sequence 之間的順序。因此我們在輸入前要加上一個與 <span
+class="math inline">\(a^i\)</span> 同維度的 <span
+class="math inline">\(e^i\)</span>，而這個 <span
+class="math inline">\(e^i\)</span> 就代表位置資料，在原論文中 <span
+class="math inline">\(e^i\)</span> 是人工設計的，不是學習出來的。</p>
+<p>那會有一個小問題，為什麼 <span class="math inline">\(a^i\)</span> 與
+<span class="math inline">\(e^i\)</span>
+之間是相加呢？這邊提出一個想法，假設有一個 one hot encoding <span
+class="math inline">\(p^i\)</span> ，它會與最原使的輸入 <span
+class="math inline">\(x^i\)</span> 相加，一同乘以 <span
+class="math inline">\(W\)</span> 矩陣，根據線性代數的原理 <span
+class="math inline">\(W\)</span> 可看作 <span class="math inline">\(W^I,
+W^P\)</span> 的組合，公式如下：</p>
+<p><span class="math display">\[
+\begin{gathered}
+W \cdot x^i_p = [W^I, W^P] \cdot  \begin{bmatrix}x^i\\p^i\end{bmatrix} =
+\\
+W^I \cdot x^i + W^P \cdot p^i = \\
+a^i + e^i
+\end{gathered}
+\]</span></p>
+<p>而乘開後得到 <span class="math inline">\(W^I \cdot x^i + W^P \cdot
+p^i\)</span> ，但其實 <span class="math inline">\(W^I \cdot x^i\)</span>
+就是 <span class="math inline">\(a^i\)</span> ，<span
+class="math inline">\(W^P \cdot p^i\)</span> 就是 <span
+class="math inline">\(e^i\)</span>，得證是可以直接相加的。</p>
+<p><img src="https://i.imgur.com/UHazpwA.png"
+alt="image-20210707233810364" /></p>
+<p>那又一個問題來了，<span class="math inline">\(e^i\)</span>
+倒底是怎麼設計的呢？它如果用圖畫出來會長這個樣子…</p>
+<p><img src="https://i.imgur.com/tGK6dQb.png"
+alt="image-20210707235902004" /></p>
+<p>嗯…看不懂 ww，不過它是根據一個神奇的公式所生成出來的，叫做
+Sinusoidal，以下以 <span class="math inline">\(PE\)</span> (Position
+Embedding) 代稱：</p>
+<p><span class="math display">\[
+\begin{gathered}
+PE_{(pos, 2i)} = sin(pos/10000^{2i/d_model}) \\
+PE_{(pos, 2i + 1)} = cos(pos/10000^{2i/d_model})
+\end{gathered}
+\]</span></p>
+<p><span class="math inline">\(pos\)</span> 代表輸入值在 sequence
+中的位置，舉個例子：當 <span class="math inline">\(pos\)</span> 為 1
+時，對應的 Positinal Encoding 可以寫成：</p>
+<p><span class="math display">\[
+PE(1) =
+[sin(1/10000^{0/512}),cos(1/10000^{0/512}),sin(1/10000^{2/512}),cos(1/10000^{2/512}),...]
+\]</span></p>
+<p>至於為什麼是 10000 嘛…沒人知道
+w，總之這個奇怪的式子可以有以下的好處：</p>
+<ul>
+<li>使每一個位置都有唯一的 Positional Encoding</li>
+<li>當輸入是長度會變動時，是可以單單修改公式中的 <span
+class="math inline">\(i\)</span> 來達成目的</li>
+<li>因為是三角函數的關系，可以讓 model 容易計算出相對的位置
+(角和公式)</li>
+</ul>
+<p>當然還有更多奇奇怪怪的編碼方式…</p>
+<p><img src="https://i.imgur.com/tsn4mMZ.png"
+alt="image-20210708001248746" /></p>
+<h2 id="transformer">Transformer</h2>
+<p>接下來就到重頭戲啦，我們終於可以來仔細看看裡面倒底藏了什麼東東。一共分成兩半，左半稱為
+Encoder，右半稱為 Decoder。每一個「綠色」的 Block 都可以重複 N
+遍，Encoder 的資料會送給 Decoder。接下來細解說各個部份：</p>
+<p><img src="https://i.imgur.com/gLA1fus.png"
+alt="image-20210707231927724" /></p>
+<h3 id="encoder">Encoder</h3>
+<p>先來說說左半邊的 Encoder，Encoder 的前半段 Multi-Head Attention
+就是上面提到的 Attention，比較不一樣的地方是有拉一條 Residual
+直接與結果相加，(這個部份與 self attention GAN 觀念相同)。Add &amp; Norm
+則是兩個東西的合稱，Add 就是 Residual，而 Norm 則是做完 Residual
+後會經過一個 Normalization，而這裡選用的是 Layer Norm，與 Batch Norm
+不同的是，Layer 看重的是 channel 與 channel 之間的標準化</p>
+<p><img src="https://i.imgur.com/ASydltz.png"
+alt="image-20210708002338795" /></p>
+<p>接著把結果再放進一個 FFN 中做進一步訓練，並且也加上了 Residual 及
+Layer Norm。以上為 Encoder 的整體架構。</p>
+<h3 id="decoder">Decoder</h3>
+<p>我們慢慢由下往上講起，Decoder 中一共有兩個 Attention。</p>
+<p>Decoder 的輸入就比較有趣一點了，與 RNN 相同，Decoder
+的輸入為每一個時間點產生的結果合，也就是說，在 <span
+class="math inline">\(t-1\)</span> 的 output 就是在 <span
+class="math inline">\(t\)</span> 的 input 。</p>
+<p>也因為這樣，在 Decoder 的「第一個」 self attention，換了個名字：叫做
+Masked Multi-Head Self Attention，其實道理也很簡單：因為 Decoder 的
+input 是隨著時間變化了增加的，因此在做 attention
+的時候我們不能像時空旅人一樣，直接預知到未來的輸出一起做運算。解決的方法就是在
+query 乘上 key 後多乘上一個 Mask ，這個 Mask 負責把後面的值給蓋住，不讓
+attention 算到它。(先做 Masked 再做 Softmax)，下圖為 Masked Multi-Head
+Self Attention 的流程圖：</p>
+<p><img src="https://i.imgur.com/ECf9hPH.png"
+alt="image-20210708003720186" /></p>
+<p>Decoder 的輸入第一個字符會是一個
+&lt;Begin&gt;，而輸出最後一個字節會是一個 &lt;End&gt;，下圖解釋 Decoder
+的 input 以及 output 以及它是「依序」生出結果來的。</p>
+<p><img src="https://i.imgur.com/RYXM1sz.png"
+alt="image-20210708004319820" /></p>
+<p>值得注意的是 Decoder 的訓練與測式的方法不同：
+<strong>測試時：</strong> 如果 RNN 一樣，上一個時間點的 output
+就為下一個時間點的 input，接著照著 Transformer
+的架構走，一個一個的生成出結果。 <strong>訓練時：</strong>
+這裡就比較特別了，用了一個叫做 Teacher Forcing
+的方法，簡單來說就是直接把 Ground Truth 當成輸入，直接去訓練
+Decoder，因為是直接輸入「整串」GT，所以可以平行化加速。(但依然會被 Mask
+給蓋掉後面的值 w，不然真的就是時空旅人了)</p>
+<p>「第二個」Attention，也有變化，它其實不能稱為完全的
+Attention，「第二個」Attention 的 Query 來自 Decoder，Key Value 來自
+Encoder (仔細看看圖)</p>
+<p>最後經過 Softmax 得到 one Hot
+encoding，預測出下一個時間點的字詞。</p>
+<p>以下就是 Transformer 的完整架構啦啦，比較特別是它的 Seq2Seq
+的感覺吧，輸入是 Sequence 輸出也是 Sequence，這種東西要怎麼放到 CV
+中去實作呢…？所以接下來要來討論 DETR 這篇論文，他成功的把 Transformer
+放進 Object detection 的問題應用中。</p>
+<h2 id="reference">Reference</h2>
+<p>為什麼要使用 LayerNorm https://www.zhihu.com/question/395811291</p>
+<p>為什麼要提出 scaled dot product attention
+https://blog.csdn.net/qq_37430422/article/details/105042303</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/26/Vision-Transformer-演化史-Visual-Transformers-Token-based-Image-Representation-and-Processing-for-Computer-Vision-使用-visual-token-來強化傳統-CNN-的結果/" rel="bookmark">Vision Transformer 演化史: Visual Transformers: Token-based Image Representation and Processing for Computer Vision - 使用 visual token 來強化傳統 CNN 的結果</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/06/%E4%BD%BF%E7%94%A8%E6%B7%B1%E5%BA%A6%E5%AD%B8%E7%BF%92%E5%9C%A8-super-resolution-%E6%95%B4%E7%90%86-%E4%BA%8C/" rel="prev" title="使用深度學習在 super resolution 整理 (二)">
+      <i class="fa fa-chevron-left"></i> 使用深度學習在 super resolution 整理 (二)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/08/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9AEnd-to-End-Object-Detection-with-Transformers-DETR/" rel="next" title="NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR">
+      NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#transformer-%E6%9E%B6%E6%A7%8B%E5%88%9D%E7%9C%8B"><span class="nav-number">1.</span> <span class="nav-text">Transformer 架構初看</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#self-attention"><span class="nav-number">2.</span> <span class="nav-text">self attention</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#multi-head-self-attention"><span class="nav-number">3.</span> <span class="nav-text">Multi-head Self attention</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#positional-encoding"><span class="nav-number">4.</span> <span class="nav-text">Positional Encoding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#transformer"><span class="nav-number">5.</span> <span class="nav-text">Transformer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#encoder"><span class="nav-number">5.1.</span> <span class="nav-text">Encoder</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#decoder"><span class="nav-number">5.2.</span> <span class="nav-text">Decoder</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/07/07/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9Aself-attention-%E4%BB%A5%E5%8F%8A-Transformer/";
+    this.page.identifier = "2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/";
+    this.page.title = "NLP 與 CV 的結合：self attention 以及 Transformer";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

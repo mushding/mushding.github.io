@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="DeepMind 在 2021 年 2 月提出一篇以 CNN based 的 NFNet，旨在把深度學習中已經使用已久的 Batch Normalization 去掉，希望能藉此建構出 Normalize-Free 的網路架構 (正是 NFNet 的名稱由來) 並提出代替 BN 的 AGC (自適應梯度修剪 Adaptive Gradient Clipping)，在調整梯度大小上有著不錯的效果 在">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NFNet: High-Performance Large-Scale Image Recognition Without Normalization">
+<meta property="og:url" content="https://mushding.space/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="DeepMind 在 2021 年 2 月提出一篇以 CNN based 的 NFNet，旨在把深度學習中已經使用已久的 Batch Normalization 去掉，希望能藉此建構出 Normalize-Free 的網路架構 (正是 NFNet 的名稱由來) 並提出代替 BN 的 AGC (自適應梯度修剪 Adaptive Gradient Clipping)，在調整梯度大小上有著不錯的效果 在">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/LPHRZr4.png">
+<meta property="og:image" content="https://i.imgur.com/BpN2e3j.png">
+<meta property="og:image" content="https://i.imgur.com/k0UiJNV.png">
+<meta property="og:image" content="https://i.imgur.com/pRc9S3z.png">
+<meta property="og:image" content="https://i.imgur.com/QvmDKAQ.png">
+<meta property="og:image" content="https://i.imgur.com/YrN8TP5.png">
+<meta property="og:image" content="https://i.imgur.com/PyChVBf.png">
+<meta property="og:image" content="https://i.imgur.com/komL4Bd.png">
+<meta property="article:published_time" content="2022-02-12T05:54:04.000Z">
+<meta property="article:modified_time" content="2022-02-25T10:21:38.720Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="CNN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/LPHRZr4.png">
+
+<link rel="canonical" href="https://mushding.space/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>NFNet: High-Performance Large-Scale Image Recognition Without Normalization | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NFNet: High-Performance Large-Scale Image Recognition Without Normalization
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-02-12 13:54:04" itemprop="dateCreated datePublished" datetime="2022-02-12T13:54:04+08:00">2022-02-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-25 18:21:38" itemprop="dateModified" datetime="2022-02-25T18:21:38+08:00">2022-02-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.5k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>9 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>DeepMind 在 2021 年 2 月提出一篇以 CNN based 的
+NFNet，旨在把深度學習中已經使用已久的 Batch Normalization
+去掉，希望能藉此建構出 Normalize-Free 的網路架構 (正是 NFNet
+的名稱由來)</p>
+<p>並提出代替 BN 的 AGC (自適應梯度修剪 Adaptive Gradient
+Clipping)，在調整梯度大小上有著不錯的效果</p>
+<p>在手動選用 SE+ResNeXt 網路下，並加上 AGC 的加持，NFNet
+成功達到了當前的 SOTA</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2102.06171.pdf">https://arxiv.org/pdf/2102.06171.pdf</a></p>
+<p>keywords: NFNet、AGC <span id="more"></span></p>
+<h2 id="batch-normalization-的缺點">Batch Normalization 的缺點</h2>
+<p>首先來看看為什麼這篇論文要把 BN 給去掉，BN
+做為算是深度學習中的基石元件，倒底發生了什麼事情呢？</p>
+<p>本篇論文給出了以下三點缺點：</p>
+<ol type="1">
+<li><strong>BN 需要額外的計算及記憶體資源</strong>。在計算一個 mini
+batch 之間的 <span class="math inline">\(\mu\)</span> 及 <span
+class="math inline">\(\sigma\)</span> 會需額外保存它的臨時變量</li>
+<li><strong>BN 會使得網路在訓練及測試時會有差異
+(discrepency)</strong>。也就是 pytorch 中的 <code>model.train()</code>
+和 <code>model.eval()</code> 的差異，資料在進網路參數時會因為 BN
+而有不同的行為模式，會需要用一個隱藏參數來調整</li>
+<li><strong>BN 破壞了資料樣本之間的獨立性</strong>。BN 與 Batch Size
+有絕對的關系，當 Batch Size
+越大越能反應真實資料的分佈，效果越好，反之越差。換句話說，網路訓練的好壞會與資料的選擇有關</li>
+</ol>
+<p>另外還有一點 (我自己多認為的)，在 pytorch DDP (分佈式訓練) 中，BN
+的存在會使得不同機器上的資料分佈不同，各個機器最後在整合資訊時，會出現一定程度上資料不合的問題</p>
+<h2 id="batch-normalization-的優點">Batch Normalization 的優點</h2>
+<p>雖然 BN 有上述種種小問題，但是在先把 BN 去掉之前也要先認識一下 BN
+倒底有哪些優點，才會讓它在深度學習獨霸一時</p>
+<p><strong>BN 會降低 Residual Branch 的隱參數權重</strong>。所謂
+Residual Branch 就是 ResNet 中的「主要網路塊」，如圖最中間網路塊</p>
+<p><img src="https://i.imgur.com/LPHRZr4.png"
+alt="image-20220214132956188" /></p>
+<p>而在 Residual Branch 中加入 BN 可以有效的使 ResNet
+中大部份的資料流，流向 Skip
+Connection，使得資料得以往網路深層前進，加深網路的層數。也可看成加入 BN
+後，會使得主支線的輸出非常小，經 <span
+class="math inline">\(\mathcal{F}(x)+x\)</span>
+公式後，網路下一層的輸入的初始值會與上一層網路差不多 <span
+class="math inline">\(x\)</span></p>
+<p><strong>BN
+會減少資料分佈</strong>。如果資料分佈非常鬆散，會使得網路非常難收斂，非常難訓練。也可說
+BN 可以有效的平滑 landscape。</p>
+<p><strong>BN 有正規化的效果、BN 在訓練大 Batch Size
+比較有效果</strong>。與上一點相當，可以使網路的 landscape
+平滑化，進而在設定 learning rate 時可以調大一點，再進而可以加速網路訓練
+(但不會加強太多效果)</p>
+<h2 id="nf-resnet">NF-ResNet</h2>
+<p>其實早在 2018-2019 年，就有人陸陸續續提出不含 BN
+的網路架構了，但基本上都沒辨法達到當前的 SOTA。2021 年同樣也是由
+Deepmind 提出 NF-ResNet，而本篇的 NFNet
+正是由「自家」的網路加以修改而來。</p>
+<p>而 NF-ResNet 最核心的理念如下圖：</p>
+<p><img src="https://i.imgur.com/BpN2e3j.png"
+alt="image-20220214144159705" /></p>
+<p>將 ResNet 的公式，新增了兩個超參數 <span
+class="math inline">\(\alpha\beta\)</span> ，修改如下： <span
+class="math display">\[
+\begin{gather}
+x=\mathcal{F}(x)+x \rightarrow\\
+h_{i+1} = h_i+\alpha f_i(h_i/\beta_i)
+\end{gather}
+\]</span> 簡單來說 <span class="math inline">\(\alpha\)</span>
+為經網路後的加權值，通常都設得很小 0.2，<span
+class="math inline">\(\beta\)</span>
+為預測輸入的標準差。加入以上兩個超參數的用意是為了模仿 BN
+使大部份資料流向 Skip Connection</p>
+<h2 id="adaptive-gradient-clipping-agc">Adaptive Gradient Clipping
+(AGC)</h2>
+<p>而本篇 NFNet 網路是架構在 NF-ResNet 之下的，並且提出了 Adaptive
+Gradient Clipping，將 NFNet 可訓練的 Batch Size 進一步增大</p>
+<p>首先什麼是 Gradient Clipping？Gradient Clipping
+白話來說就是：為了使網路訓練穩定，當梯度下降的量值過大於一定設定值時，而強迫它改為一固定常數。公式如下：
+<span class="math display">\[
+G\rightarrow \left\{
+\begin{array}{ll}
+\lambda\frac{G}{||G||} &amp;\mathrm{if} ||G||&gt;\lambda,\\
+G&amp;\mathrm{otherwise.}
+\end{array}
+\right.
+\]</span> <img src="https://i.imgur.com/k0UiJNV.png"
+alt="image-20220214152848254" /></p>
+<p>但以上公式會有一個問題：<span class="math inline">\(\lambda\)</span>
+的值非常敏感，太大太小效果都不好</p>
+<p>於是本篇作者提出：可自適應調整 <span
+class="math inline">\(\lambda\)</span> 的 Gradient Clipping，公式如下：
+<span class="math display">\[
+G^l_i\rightarrow\left\{
+\begin{array}{ll}
+\lambda\frac{||W^l_i||^*_F}{||G^l_i||_F}G^l_i &amp; \mathrm{if}
+\frac{||G^l_i||}{||W^l_i||^*_F}&gt;\lambda,\\
+G^l_i&amp;\mathrm{otherwise.}
+\end{array}
+\right.
+\]</span> 其函意如下：</p>
+<p><span class="math inline">\(G^l\)</span> 為一層中算出來的梯度，<span
+class="math inline">\(W^l\)</span> 為一層中目前的權重值</p>
+<p>當「算出來的梯度」與「目前權重值」的比值大於 <span
+class="math inline">\(\lambda\)</span> 就進入 Clipping</p>
+<p>Clipping 多少呢？Clipping 「算出來的梯度」乘上剛剛比值的「倒數」</p>
+<p>意義為：我們的上限決定值加入當前權重變量，如果前一時刻權重變化大，梯度計算也大，那比值小代表還算合理；如果前一時刻權重變化小，梯度計算大，比值就會超大，進入
+Clipping</p>
+<p>利用這個方法就可以自動的來調整 <span
+class="math inline">\(\lambda\)</span>，那為什麼加入 AGC 可以改善沒有 BN
+的問題呢？前面也有提到了，少了 BN 網路中的 landscape 非常崎嶇
+(以下為示意圖，非本例子)，在非常崎嶇下梯度常常算一算就跑掉了，因此才需加入
+AGC 穩定訓練</p>
+<p><img src="https://i.imgur.com/pRc9S3z.png"
+alt="image-20220214163945964" /></p>
+<h2 id="效果">效果</h2>
+<p>下圖為：使用 BN (藍)、使用 NF-ResNet 沒有 AGC (橘)、使用 NFNet 有 AGC
+(綠)，在不同 Batch Size 下的 Top1 準確率</p>
+<p><img src="https://i.imgur.com/QvmDKAQ.png"
+alt="image-20220214154715148" /></p>
+<p>可以發現未加 AGC 以及 未加 BN 的 NF-ResNet 在 Batch Size 超過 2048
+後就爆掉了，而加入 AGC 的 NFNet 可以很好的解決不使用 BN Batch Size
+不能設太大的問題</p>
+<h2 id="網路架構">網路架構</h2>
+<p>相較之下本篇的網路架構比較不是重點，作者為了能夠把本架構刷到 SOTA
+而使用了 SE-ResNeXt-50。詳細的架構圖如下：</p>
+<p><img src="https://i.imgur.com/YrN8TP5.png"
+alt="image-20220214191340591" /></p>
+<p>左手為 Transition Block，右手為 Non-Transition Block</p>
+<h2 id="實驗結果">實驗結果</h2>
+<p>首先來看 SOTA 表</p>
+<p><img src="https://i.imgur.com/PyChVBf.png"
+alt="image-20220214191548689" /></p>
+<p>雖然說使用了 SE-ResNeXt-50 所以效果才那麼好，但作者還是有做 Ablation
+實驗，看看使用 AGC 是不是真的有比較好？</p>
+<p><img src="https://i.imgur.com/komL4Bd.png"
+alt="image-20220214191855754" /></p>
+<p>實驗證明在相同架構下，使用 AGC 效果有好大約 1%</p>
+<h2 id="結論">結論</h2>
+<p>本篇成功的提出把 BN 去掉的網路架構 NFNet，並且也刷上了當前的 SOTA
+(力抗 Transformer 架構 XD)</p>
+<p>但是我覺得是不是有達到 SOTA 到不是其次，那是因為作者使用了
+SE-ResNeXt-50 (沒有為什麼) 才有可能的</p>
+<p>而是這篇論文提出了另一個不用 BN 效果也不差的方法 AGC，使得 AGC
+網路也有 BN 網路的「Batch Size 大」「訓練快」「landscape
+平滑」等優點</p>
+<p>至於 BN 真的有沒有必要去掉呢？我認為在普通情況下其實差不多，但在 DDP
+分佈式訓練上，或許就是 AGC 的天下了</p>
+<h2 id="reference">Reference</h2>
+<p><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=rNkHjZtH0RQ">Yannic Kilcher
+論文圖解 (英文) (推)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/zhouchen1998/article/details/113824617">csdn
+文章 (我覺得這篇很詳細)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://medium.com/ching-i/nfnet-normalizer-free-resnets-%E8%AB%96%E6%96%87%E9%96%B1%E8%AE%80-ce7235d1b123">medium
+文章</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/358228383">知乎大神</a></p>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2101.08692.pdf">NF-ResNets
+arxiv</a></p>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1712.09913.pdf">Visualizing the Loss
+Landscape of Neural Nets (landscape 圖)</a></p>
+
+    </div>
+
+    
+    
+    
+      
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CNN/" rel="tag"># CNN</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/" rel="prev" title="MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer">
+      <i class="fa fa-chevron-left"></i> MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/" rel="next" title="Self-supervised Learning 與 Contrastive Learning 速讀">
+      Self-supervised Learning 與 Contrastive Learning 速讀 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#batch-normalization-%E7%9A%84%E7%BC%BA%E9%BB%9E"><span class="nav-number">1.</span> <span class="nav-text">Batch Normalization 的缺點</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#batch-normalization-%E7%9A%84%E5%84%AA%E9%BB%9E"><span class="nav-number">2.</span> <span class="nav-text">Batch Normalization 的優點</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nf-resnet"><span class="nav-number">3.</span> <span class="nav-text">NF-ResNet</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#adaptive-gradient-clipping-agc"><span class="nav-number">4.</span> <span class="nav-text">Adaptive Gradient Clipping
+(AGC)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">5.</span> <span class="nav-text">效果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">6.</span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E7%B5%90%E6%9E%9C"><span class="nav-number">7.</span> <span class="nav-text">實驗結果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">8.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">9.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/";
+    this.page.identifier = "2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/";
+    this.page.title = "NFNet: High-Performance Large-Scale Image Recognition Without Normalization";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

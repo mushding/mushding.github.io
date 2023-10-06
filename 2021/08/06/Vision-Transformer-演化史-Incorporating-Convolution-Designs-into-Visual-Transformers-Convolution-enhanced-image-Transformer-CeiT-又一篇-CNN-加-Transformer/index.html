@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="Convolution-enhanced image Transformer (CeiT)，與 CvT 的想法相同，都是想要藉助 CNN 的力量來改善 Transformer 的效能，而這兩篇論文提出的時間差不多，基本上思路也差不多，以下會簡單帶過 https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2103.11816.pdf keywords: CeiT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vision Transformer 演化史: Incorporating Convolution Designs into Visual Transformers - Convolution-enhanced image Transformer (CeiT) 又一篇 CNN 加 Transformer">
+<meta property="og:url" content="https://mushding.space/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-%E5%8F%88%E4%B8%80%E7%AF%87-CNN-%E5%8A%A0-Transformer/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="Convolution-enhanced image Transformer (CeiT)，與 CvT 的想法相同，都是想要藉助 CNN 的力量來改善 Transformer 的效能，而這兩篇論文提出的時間差不多，基本上思路也差不多，以下會簡單帶過 https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2103.11816.pdf keywords: CeiT">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/hDpjVX4.png">
+<meta property="og:image" content="https://i.imgur.com/MgIMIcc.png">
+<meta property="og:image" content="https://i.imgur.com/8On4Qq8.png">
+<meta property="og:image" content="https://i.imgur.com/7RxBVHO.png">
+<meta property="og:image" content="https://i.imgur.com/XPzxExY.png">
+<meta property="og:image" content="https://i.imgur.com/3MOfyr3.png">
+<meta property="og:image" content="https://i.imgur.com/Ps4TVZH.png">
+<meta property="og:image" content="https://i.imgur.com/8ZERYDf.png">
+<meta property="article:published_time" content="2021-08-06T15:42:28.000Z">
+<meta property="article:modified_time" content="2021-08-07T04:15:25.460Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/hDpjVX4.png">
+
+<link rel="canonical" href="https://mushding.space/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-%E5%8F%88%E4%B8%80%E7%AF%87-CNN-%E5%8A%A0-Transformer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Vision Transformer 演化史: Incorporating Convolution Designs into Visual Transformers - Convolution-enhanced image Transformer (CeiT) 又一篇 CNN 加 Transformer | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-%E5%8F%88%E4%B8%80%E7%AF%87-CNN-%E5%8A%A0-Transformer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Vision Transformer 演化史: Incorporating Convolution Designs into Visual Transformers - Convolution-enhanced image Transformer (CeiT) 又一篇 CNN 加 Transformer
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-08-06 23:42:28" itemprop="dateCreated datePublished" datetime="2021-08-06T23:42:28+08:00">2021-08-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2021-08-07 12:15:25" itemprop="dateModified" datetime="2021-08-07T12:15:25+08:00">2021-08-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-%E5%8F%88%E4%B8%80%E7%AF%87-CNN-%E5%8A%A0-Transformer/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/08/06/Vision-Transformer-演化史-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-又一篇-CNN-加-Transformer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>2.8k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>7 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Convolution-enhanced image Transformer (CeiT)，與 CvT
+的想法相同，都是想要藉助 CNN 的力量來改善 Transformer
+的效能，而這兩篇論文提出的時間差不多，基本上思路也差不多，以下會簡單帶過</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2103.11816.pdf">https://arxiv.org/pdf/2103.11816.pdf</a></p>
+<p>keywords: CeiT <span id="more"></span></p>
+<h2 id="introduction">1. Introduction</h2>
+<p>這篇作者認為 CNN 最重要的兩大特色就是：Invariance 平移不變性，以及
+Locality 局部性，與 CvT 強調的 (local receptive fields 局部感受視野,
+shared weights 權重共享, spatial subsampling 空間下採樣)
+概念相同。因此提出把 CNN 結合 Transformer 來解決以上問題。</p>
+<p>網路架構有以下的改進：</p>
+<ol type="1">
+<li>提出 Image-to-tokens 的方法，來改善原本 ViT 16x16 patch 的做法</li>
+<li>為了強化特徵的提取，CeiT 把 MLP 層的全連接層
+(Feed-Forwardnetwork)，換成了 Locally-enhanced Feed-Forward layer，加強
+token 之間的關聯性</li>
+<li>在 Transformer 最後一步加上了 Layer-wise Class token Attention
+進一步提升性能</li>
+</ol>
+<h2 id="網路架構">2. 網路架構</h2>
+<h3 id="image-to-tokens">Image-to-tokens</h3>
+<p><img src="https://i.imgur.com/hDpjVX4.png" alt="Image" /></p>
+<p>為了解決 ViT 把圖片依照 patch 16x16 過於粗糙的做法，因此改成先經 CNN
+再來分 patch，簡單來說原圖會先做一次卷積，加上一個 BN 再加上一個
+Maxpolling，最後再用 ViT 的分 patch 的方法來分塊。公式如下：</p>
+<p><span class="math display">\[
+x&#39; = \mathrm{I2T(x)} = \mathrm{MaxPool(BN(Conv(x)))}
+\]</span></p>
+<p>I2T 利用了 CNN 在取得低階特徵的優勢，來縮小 patch
+的大小減少訓練難度</p>
+<p>與 CvT 不同的地方：CvT 是在每一個 Stage 都會做一次 CNN 卷積，而 CeiT
+只會在網路的最一開始做一次而已</p>
+<h3 id="locally-enhanced-feed-forward-layer">Locally-enhanced
+Feed-Forward layer</h3>
+<p><img src="https://i.imgur.com/MgIMIcc.png" alt="Image" /></p>
+<p>作者把原本的 MLP 層中的 FF 換成 LeFF (Locally-enhanced Feed-Forward
+layer)，加強 token 之間全局特徵提取的能力</p>
+<ol type="1">
+<li>首先會先把 input token 分成 patch token 以及 class token</li>
+<li>class token 不動，而 patch token 則會經過以下步驟</li>
+<li>經 Linear Projection 放大維度</li>
+<li>再 reshape 成三維圖片</li>
+<li>再做一次 Depth-wise 卷積運算</li>
+<li>reshape 成二維序列</li>
+<li>再做一次 Linear Projection</li>
+<li>把 class token 加回來</li>
+</ol>
+<p>比較特別的是在每一個 Linear Projection 以及 Convolution
+之後都會加上一個 BN 以及 GELU</p>
+<p>公式如下：</p>
+<p><span class="math display">\[
+\begin{gathered}
+  \mathrm{x_{cls}, x_{patch} = Split(x)}\\
+  \mathrm{x_{patch} = GELU(BN(Linear1(x_{patch})))}\\
+  \mathrm{x_{patch} = SpatialRestore(x_{patch})}\\
+  \mathrm{x_{patch} = GELU(BN(DWConv(x_{patch})))}\\
+  \mathrm{x_{patch} = Flatten(x_{patch})}\\
+  \mathrm{x_{patch} = GELU(BN(Linear2(x_{patch})))}\\
+  \mathrm{x = Cancat(x_{cls},x_{patch})}\\
+\end{gathered}
+\]</span></p>
+<p>與 CvT 不同的地方：其實這一步與 CvT 基本上差不多，只是 CvT 是作用在
+MSA 層上，而 CeiT 是作用在 MLP 層上。以及最重要的，CeiT 在網路中使用了
+GELU</p>
+<h4 id="gelu">GELU</h4>
+<p>關於 GELU 這裡不多做介紹。可以參考以下文章：我自己的大意是，GELU 與
+ReLU 很像，都是把值乘上 0 或 1，只是 GELU 會根據當下值的機率來決定要乘 0
+還是 1。</p>
+<p>而 CeiT 之所以會使用 GELU 是因為之前在 NLP 流行的 GPT-2、BERT
+都使用上了 GELU，並且在 語音辨識上取得不錯的成積。嗯…可以理解成 NLP
+專用的 Activate funtion 吧哈哈</p>
+<p><a
+target="_blank" rel="noopener" href="https://www.jiqizhixin.com/articles/2019-12-30-4">https://www.jiqizhixin.com/articles/2019-12-30-4</a></p>
+<h3 id="layer-wise-class-token-attention">Layer-wise Class token
+Attention</h3>
+<p><img src="https://i.imgur.com/8On4Qq8.png" alt="Image" /></p>
+<p>Layer-wise Class token Attention 是加在整個 Transformer
+的最後面的，由圖可以看出，作者提出的這個新的 LCA 層是加在 Encoder
+之外。</p>
+<p>作者認為隨著網路不斷的加深，希望能在 layer 與 layer
+層與層之間加深彼此的關系，因此把每一層的 class token 都拿出來，經過一次
+self-attention 得到 Layer-wise 的 attention，也就是每個層的 class token
+之間的關系，而最後的 output 也是整個 CeiT 的 output</p>
+<h2 id="experiments">3. Experiments</h2>
+<h3 id="網路架構-1">網路架構</h3>
+<p><img src="https://i.imgur.com/7RxBVHO.png" alt="Image" /></p>
+<h3 id="實驗一sota-比較">實驗一、SOTA 比較</h3>
+<p>效果沒有比 EfficientNet 來得好，但是運算量及參數使用量比較少</p>
+<p><img src="https://i.imgur.com/XPzxExY.png" alt="Image" /></p>
+<h3 id="實驗二transfer-learning-比較">實驗二、Transfer Learning
+比較</h3>
+<p>雖然還是沒有超過 EfficientNet ，但在 ImageNet 上的 Transfer Learning
+超過了 ViT，證明 CNN + Transformer 是有潛力的</p>
+<p><img src="https://i.imgur.com/3MOfyr3.png" alt="Image" /></p>
+<h3 id="實驗三i2t-的比較">實驗三、I2T 的比較</h3>
+<p>使用了不同卷積的 kernel size、stride，以及 maxpooling
+BN，看看哪一個排列組合效果最好：</p>
+<p><img src="https://i.imgur.com/Ps4TVZH.png" alt="Image" /></p>
+<h3 id="實驗四leff-的比較">實驗四、LeFF 的比較</h3>
+<p>同樣比較了 kernel size 以及是否使用 BN 來找出最好的排列組合</p>
+<p><img src="https://i.imgur.com/8ZERYDf.png" alt="Image" /></p>
+<h2 id="結論">結論</h2>
+<p>CeiT 基本與 CvT 想法一模一樣，都是把 CNN 加上了 Transformer
+來改善運算量、資料夾大小、效能等等問題。</p>
+<p>而 CeiT 我自己認為比較特別的點在於，使用到了 GELU 這個 NLP 才在用的
+Activate funtion，以及在最後加上了 LCA，把每一個不同 stage 的 class
+token 拿出做一個 self attention，找出一個橫跨 Layer 之間的關系。</p>
+<h2 id="reference">Reference</h2>
+<p>https://zhuanlan.zhihu.com/p/361112935</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-CvT-Introducing-Convolutions-to-Vision-Transformers-CNN-%E8%88%87-Transformer-%E5%90%84%E5%8F%96%E6%89%80%E9%95%B7/" rel="prev" title="Vision Transformer 演化史: CvT: Introducing Convolutions to Vision Transformers - CNN 與 Transformer 各取所長">
+      <i class="fa fa-chevron-left"></i> Vision Transformer 演化史: CvT: Introducing Convolutions to Vision Transformers - CNN 與 Transformer 各取所長
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/08/13/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Tokens-to-Token-ViT-Training-Vision-Transformers-from-Scratch-on-ImageNet-T2T-ViT/" rel="next" title="Vision Transformer 演化史: Tokens-to-Token ViT: Training Vision Transformers from Scratch on ImageNet - T2T-ViT">
+      Vision Transformer 演化史: Tokens-to-Token ViT: Training Vision Transformers from Scratch on ImageNet - T2T-ViT <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">1.</span> <span class="nav-text">1. Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">2.</span> <span class="nav-text">2. 網路架構</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#image-to-tokens"><span class="nav-number">2.1.</span> <span class="nav-text">Image-to-tokens</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#locally-enhanced-feed-forward-layer"><span class="nav-number">2.2.</span> <span class="nav-text">Locally-enhanced
+Feed-Forward layer</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gelu"><span class="nav-number">2.2.1.</span> <span class="nav-text">GELU</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#layer-wise-class-token-attention"><span class="nav-number">2.3.</span> <span class="nav-text">Layer-wise Class token
+Attention</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiments"><span class="nav-number">3.</span> <span class="nav-text">3. Experiments</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B-1"><span class="nav-number">3.1.</span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E4%B8%80sota-%E6%AF%94%E8%BC%83"><span class="nav-number">3.2.</span> <span class="nav-text">實驗一、SOTA 比較</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E4%BA%8Ctransfer-learning-%E6%AF%94%E8%BC%83"><span class="nav-number">3.3.</span> <span class="nav-text">實驗二、Transfer Learning
+比較</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E4%B8%89i2t-%E7%9A%84%E6%AF%94%E8%BC%83"><span class="nav-number">3.4.</span> <span class="nav-text">實驗三、I2T 的比較</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E5%9B%9Bleff-%E7%9A%84%E6%AF%94%E8%BC%83"><span class="nav-number">3.5.</span> <span class="nav-text">實驗四、LeFF 的比較</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">4.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/08/06/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-%E5%8F%88%E4%B8%80%E7%AF%87-CNN-%E5%8A%A0-Transformer/";
+    this.page.identifier = "2021/08/06/Vision-Transformer-演化史-Incorporating-Convolution-Designs-into-Visual-Transformers-Convolution-enhanced-image-Transformer-CeiT-又一篇-CNN-加-Transformer/";
+    this.page.title = "Vision Transformer 演化史: Incorporating Convolution Designs into Visual Transformers - Convolution-enhanced image Transformer (CeiT) 又一篇 CNN 加 Transformer";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

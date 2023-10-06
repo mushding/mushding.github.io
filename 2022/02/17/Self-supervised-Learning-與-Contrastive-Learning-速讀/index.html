@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="2018 Google 提出 BERT，給 NLP 下了一個定心丸，同時也證明了無監督學習以及預訓練的潛力 但是在坐穩監督式學習的 CV 中，似乎不論如何無監督學習始終超越不了有監督式學習，但是收集資料以及標記資料所花的成本也偷偷在告訴我們無監督的強項 其實早在 2006 年，AI 大佬 LeCun 就曾提過類似的想法了，並且在日後還說出：self-supervised learning is t">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Self-supervised Learning 與 Contrastive Learning 速讀">
+<meta property="og:url" content="https://mushding.space/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="2018 Google 提出 BERT，給 NLP 下了一個定心丸，同時也證明了無監督學習以及預訓練的潛力 但是在坐穩監督式學習的 CV 中，似乎不論如何無監督學習始終超越不了有監督式學習，但是收集資料以及標記資料所花的成本也偷偷在告訴我們無監督的強項 其實早在 2006 年，AI 大佬 LeCun 就曾提過類似的想法了，並且在日後還說出：self-supervised learning is t">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/9VsiOqR.jpg">
+<meta property="og:image" content="https://i.imgur.com/zLU4fD7.png">
+<meta property="og:image" content="https://i.imgur.com/3wJlaGs.png">
+<meta property="og:image" content="https://i.imgur.com/lThZLyw.png">
+<meta property="og:image" content="https://i.imgur.com/l6CMosM.png">
+<meta property="og:image" content="https://i.imgur.com/Yqxpyky.png">
+<meta property="og:image" content="https://i.imgur.com/reOSCRu.png">
+<meta property="og:image" content="https://i.imgur.com/yi0dvNc.png">
+<meta property="og:image" content="https://i.imgur.com/0yD1bpB.png">
+<meta property="og:image" content="https://i.imgur.com/4V7YB2j.png">
+<meta property="og:image" content="https://i.imgur.com/oaCxxIg.png">
+<meta property="og:image" content="https://i.imgur.com/LU0Scoo.png">
+<meta property="og:image" content="https://i.imgur.com/75CHVCI.png">
+<meta property="og:image" content="https://i.imgur.com/WyTTGI4.png">
+<meta property="article:published_time" content="2022-02-17T04:05:50.000Z">
+<meta property="article:modified_time" content="2022-05-08T02:21:25.450Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Self-supervised Learning">
+<meta property="article:tag" content="Contrastive Learning">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/9VsiOqR.jpg">
+
+<link rel="canonical" href="https://mushding.space/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Self-supervised Learning 與 Contrastive Learning 速讀 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Self-supervised Learning 與 Contrastive Learning 速讀
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-02-17 12:05:50" itemprop="dateCreated datePublished" datetime="2022-02-17T12:05:50+08:00">2022-02-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-05-08 10:21:25" itemprop="dateModified" datetime="2022-05-08T10:21:25+08:00">2022-05-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/02/17/Self-supervised-Learning-與-Contrastive-Learning-速讀/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>5.5k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>14 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>2018 Google 提出 BERT，給 NLP
+下了一個定心丸，同時也證明了無監督學習以及預訓練的潛力</p>
+<p>但是在坐穩監督式學習的 CV
+中，似乎不論如何無監督學習始終超越不了有監督式學習，但是收集資料以及標記資料所花的成本也偷偷在告訴我們無監督的強項</p>
+<p>其實早在 2006 年，AI 大佬 LeCun
+就曾提過類似的想法了，並且在日後還說出：<code>self-supervised learning is the future of ai</code>
+這番很有野心的話，可見大家對於它的期望還是還高的</p>
+<p>隨著時間的進展，無監督式學習被 NLP
+玩得走火入魔，也慢慢誕生出了新名詞：Self-supervised Learning
+自監督學習，這個詞是 LeCun
+自己這麼叫的，目的是為了和無監督式學有個區分，但本質上又有哪一點點類似</p>
+<p>後來有了 Contrastive Learning、以及 MoCo SimCLR 的提出，應用在 CV
+上的自監督學習似乎也在慢慢成長起來…</p>
+<p>keywords: Self-supervised Learning、Contrastive Learning
+<span id="more"></span></p>
+<h2 id="什麼是自監督學習-self-supervised-learning">什麼是自監督學習
+(Self-Supervised Learning)</h2>
+<p>自監督學習是無監督學習的一種分支，主要是利用輔助任務
+(pretext)，先使用一大堆無標記的資料中挖掘自身的資訊，再來把得到的資訊放到下游任務中做進一步的分析
+(Pretrain -&gt; Finetune)</p>
+<p>與無監督學習最大的差別在於「挖掘自己的資訊」，最後的特徵結果是從自己與自己相互比較得出來的</p>
+<p><img src="https://i.imgur.com/9VsiOqR.jpg"
+alt="v2-8d077a997287e6fc7f9b5576b3e16f00_720w" /></p>
+<p>大致上來說自監督學習可為兩類：生成式以及判別式</p>
+<p><strong>生成式</strong>的代表任務有：GAN、VAE、ELMo、BERT、GPT…。期望能利用數據重新生成一張新的數據。目前在
+NLP
+上非常流行，但是在影像的本質上不像語言，「理解」後就可以「實行」出來，語言理解了後我們都會說，但理解了一張圖片我們不一定能「畫」出來。如下圖：能知道什麼是鈔票但是畫不出來</p>
+<p><img src="https://i.imgur.com/zLU4fD7.png"
+alt="image-20220218173741384" /></p>
+<p><strong>判別式</strong>的代表任務有：MoCo、SimCLR…。利用無監督數據，自行建立學習任務以及樣本，最後得到數據的向量表示。而判別式
+SSL 應用在 CV
+又可分為三種方法：基於背景的輔助任務、基於時序的輔助任務、基於對比學習</p>
+<p>聽不懂上面在講什麼嗎
+XD，用兩句話來解釋的話就是。<strong>生成式</strong>，輸入一張圖片，通過
+Encoder Decoder
+還原輸入圖片資訊。<strong>判別式</strong>，輸入兩張圖片，通過
+Encoder，判斷兩張圖是否相似 0 or 1</p>
+<p><img src="https://i.imgur.com/3wJlaGs.png"
+alt="image-20220221205043036" /></p>
+<h2 id="基於背景的輔助任務-pretext">基於背景的輔助任務 (pretext)</h2>
+<p>也可說是基於上下文 (context based) 的方法，在 NLP
+中已經玩得非常成熟了，像 Word2Vec 就是基於前後文的順序來預測。而 CV
+中也有非常多的論文也提出了相關的做法，下面就來簡單的掃過一遍：</p>
+<h3 id="拼圖任務">拼圖任務</h3>
+<p>目的是預測兩 Patch 之間的順序關系，流程如下圖：給定一藍色 Anchor
+周圍的 9 個紅色 Patch，則藍色與紅色的相對位置關系是什麼？<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1505.05192.pdf">Unsupervised Visual
+Representation Learning by Context Prediction</a></p>
+<p><img src="https://i.imgur.com/lThZLyw.png"
+alt="image-20220218210930235" /></p>
+<p>也可以如下下圖：隨機給兩個綠色 Patch 看看彼此的相對位置如何？<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1603.09246.pdf">Unsupervised Learning of
+Visual Representations by Solving Jigsaw Puzzles</a></p>
+<p><img src="https://i.imgur.com/l6CMosM.png"
+alt="image-20220218211619868" /></p>
+<p>第一個方法一共有 8 種可能，第二個方法一共有 64
+種可能，而且方法二效果好於方法一，於是得到了一個啟發：<strong>使用更強的監督訊息，或說更難的輔助任務，最後網路學到的東西更多，效果更好</strong></p>
+<h3 id="挖空任務">挖空任務</h3>
+<p>目的是要預測被挖去的內容是什麼？如下圖。這件事也啟發<strong>自監督學習不僅可以學習到特徵，還同時也得到一些神奇的效果</strong>。<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1604.07379.pdf">Context Encoders: Feature
+Learning by Inpainting</a></p>
+<p><img src="https://i.imgur.com/Yqxpyky.png"
+alt="image-20220218212025594" /></p>
+<h3 id="顏色預測">顏色預測</h3>
+<p>也可以輸入灰階圖，要預測圖片的顏色。<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1603.08511.pdf">Colorful Image
+Colorization</a></p>
+<p><img src="https://i.imgur.com/reOSCRu.png"
+alt="image-20220218214019298" /></p>
+<h3 id="圖片旋轉預測">圖片旋轉預測</h3>
+<p>也可以把圖片轉成各種角度，並預測出對應的角度。<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1803.07728.pdf">Unsupervised Representation
+Learning by Predicting Image Rotations</a></p>
+<p><img src="https://i.imgur.com/yi0dvNc.png"
+alt="image-20220218214640977" /></p>
+<h3 id="解耦特徵互相學習">解耦特徵互相學習</h3>
+<p>把原始的數據分成兩個部份，各做一個圖片的修改，並使它們互相學習，就可以達到自監督學式的目標。<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1611.09842.pdf">Split-Brain Autoencoders:
+Unsupervised Learning by Cross-Channel Prediction</a></p>
+<p><img src="https://i.imgur.com/0yD1bpB.png"
+alt="image-20220218214941924" /></p>
+<h3
+id="與任務相關的自監督學習-task-related-self-supervised-learning">與任務相關的自監督學習
+(Task Related Self-Supervised Learning)</h3>
+<p>在以上種種選擇自監督學習的輔助任務，會希望越接近下游任務的目標越好，如果差太多的話，效果可能會不盡其想。所以開始有了「與下游任務結合」的自監督學習想法。像下圖的做法，也很直覺，把圖片的旋轉也看成是下游分類任務的其中一類，要同時預測物體以及旋轉角度</p>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1910.05872.pdf">Self-supervised Label
+Augmentation via Input Transformations</a></p>
+<p><img src="https://i.imgur.com/4V7YB2j.png"
+alt="image-20220218215439870" /></p>
+<h2 id="基於時序的輔助任務">基於時序的輔助任務</h2>
+<p>除了一張一張圖片之外，我們也可以對有「時間相關」的資料做輔助任務，例如影片、音樂、聲音…。</p>
+<h3 id="影片上的時序">影片上的時序</h3>
+<p>我們可以把一個影片中相近的 frame 看成是有相關的樣本、相遠的 frame
+是不相關的樣本，或是放多個攝影機，同個角度拍出來的相關樣本，不同角度拍的是不相關樣本</p>
+<p><img src="https://i.imgur.com/oaCxxIg.png"
+alt="image-20220218221520253" /></p>
+<h2 id="對比學習-contrastive-learning">對比學習 Contrastive
+Learning</h2>
+<p>通過數據之間的對比來學習特徵，就好像以面這句話一樣：We don't know
+something is blue until we see
+red，沒有比較我們就永遠不知道類別差在哪裡。而核心理念很簡單：<strong>相似的影像結果也要相似，不相似的影像結果也要不相似</strong>，用數學公式來表達會是：其中
++ 是指正樣本，相似的樣本，- 是指負樣本，不相似的樣本</p>
+<p><span class="math display">\[
+\mathrm{score}(f(x),f(x^+)) &gt;&gt; \mathrm{score}(f(x), f(x^-))
+\]</span> <img
+src="https://1.bp.blogspot.com/--vH4PKpE9Yo/Xo4a2BYervI/AAAAAAAAFpM/vaFDwPXOyAokAC8Xh852DzOgEs22NhbXwCLcBGAsYHQ/s1600/image4.gif"
+alt="gif" /></p>
+<p>以下介紹而常見的損失函數</p>
+<h3 id="noise-contrastive-estimation-nce">Noise-contrastive Estimation
+(NCE)</h3>
+<p><a
+target="_blank" rel="noopener" href="https://proceedings.mlr.press/v9/gutmann10a/gutmann10a.pdf">Noise-contrastive
+estimation: A new estimation principle for unnormalized statistical
+models</a></p>
+<p>把正樣本看成一個類別、負樣本看成一個類別，列出來一個正樣本以及負樣本的
+cross entropy，跟二元 cross entropy 其實差不多。其中第一項 <span
+class="math inline">\(v^+\)</span> 代表正樣本越大代表越相近，第二項
+<span class="math inline">\(v^-\)</span>
+代表負樣本越小代表越不相近，加個負號代表越小越好 <span
+class="math display">\[
+log\,\sigma(u^Tv^+/\tau)+log\,\sigma(-u^Tv^-/\tau)
+\]</span></p>
+<h3 id="infonce">infoNCE</h3>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1807.03748.pdf">Representation
+Learning with Contrastive Predictive Coding</a></p>
+<p>像是在 NCE 中加入 Softmax，使得上式子中的大小分佈差距加大 <span
+class="math display">\[
+\mathcal{L}_N = -\mathbb{E}_X[\log\frac{f_k(x_{t+k},c_t)}{\sum_{x_j\in
+X}f_k(x_j,c_t)}]
+\]</span></p>
+<p><span class="math display">\[
+I(x_{t+k}, c_t) \geq\log(N)-\mathcal{L}_N
+\]</span> 而比較有趣的是，這個 infoNCE 是 MI (Mutual Information) 的
+lower bound。MI 其實表示的是「期望值」，是 Pointwise Mutual Information
+(PMI) 的期望值，PMI 是個像件機率，公式可定義為：設隨機變數 <span
+class="math inline">\((X,Y)\)</span> 是空間 <span
+class="math inline">\(X\times Y\)</span>
+中的一對隨機變數。他們的聯合分布是 <span
+class="math inline">\(p(x,y)\)</span>，邊緣分布分別是 <span
+class="math inline">\(p(x)\)</span> <span
+class="math inline">\(p(y)\)</span></p>
+<p><span class="math display">\[
+PMI = \log(\frac{p(x,y)}{p(x)p(y)})
+\]</span></p>
+<p>而再把機率乘上自己就可以得到期望值 MI</p>
+<p><span class="math display">\[
+MI=I(X;Y)=\int_Y\int_Xp(x,y)\log(\frac{p(x,y)}{p(x)p(y)})
+\]</span></p>
+<p>而 MI 也可以用 KL 來列式，兩者的想法正好相同 -&gt;
+兩機率分佈之間的關系。對上兩機率的乘積的 KL
+差距。當兩集合獨立時，因聯集為 0、乘積也為 0，所以 KL 差距也為 0，<a
+target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E4%BA%92%E4%BF%A1%E6%81%AF">相互資訊
+wiki</a> <span class="math display">\[
+I(X;Y)=D_{KL}(p(x,y)\,||\,p(x)\otimes p(y))
+\]</span></p>
+<p><img src="https://i.imgur.com/LU0Scoo.png"
+alt="image-20220220161230417" /></p>
+<p>同時這個 MI 也可以與條件機率有一些公式，如同貝氏圖那樣</p>
+<p><span class="math display">\[
+\begin{aligned}
+I(X;Y) &amp;=\\
+&amp;= H(X) - H(X|Y)\\
+&amp;= H(Y) - H(Y|X)\\
+&amp;= H(X) + H(Y) - H(X,Y) ...
+\end{aligned}
+\]</span></p>
+<p>那為什麼 infoNCE 是 MI 的一個下界呢？因為在 infoNCE 公式中的 <span
+class="math inline">\(f\)</span>，會正比於剛剛提到的 MI</p>
+<p><span class="math display">\[
+\mathcal{L}_N = -\mathbb{E}_X[\log\frac{f_k(x_{t+k},c_t)}{\sum_{x_j\in
+X}f_k(x_j,c_t)}]
+\]</span></p>
+<p>而 <span class="math inline">\(f\)</span> 展開會得到</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_k(x_{t+k},c_t) &amp;=\\
+&amp;= p(d=i|X,c_t)\\
+&amp;= \frac{p(x_i|c_t)\prod_{l\neq
+i}p(x_l)}{\sum^N_{j=1}p(x_j|c_t)\prod_{i\neq j}p(x_l)}\\
+&amp;=
+\frac{\frac{p(x_i|c_t)}{p(x_i)}}{\sum^N_{j=1}\frac{p(x_j|c_t)}{p(x_j)}}
+\end{aligned}
+\]</span></p>
+<p><span class="math inline">\(c\)</span> 代表 context 正確的目標
+(原論文是應用在 NLP 上，所以名稱這樣取)</p>
+<p><span class="math inline">\(p(x_i|c_t)\)</span>
+代表從正確目標出選出正樣本的機率分佈、<span
+class="math inline">\(p(x_l)\)</span> 代表從其它與 c
+無關的地方「亂」取的負樣本</p>
+<p>給定大 <span class="math inline">\(X=\{x_1,...,x_N\}\)</span>
+其中包含 <span class="math inline">\(1\)</span> 個從 <span
+class="math inline">\(p(x_i|c_t)\)</span> 選出來的正樣本，與 <span
+class="math inline">\(N-1\)</span> 個從 <span
+class="math inline">\(p(x_l)\)</span> 選出來的負樣本</p>
+<p><span class="math inline">\(p(d=i|X,c_t)\)</span>
+的意思是：給定一目標正確 context，與從 <span
+class="math inline">\(X\)</span> 中選一個 <span
+class="math inline">\(x\)</span> 分佈，是正樣本 <span
+class="math inline">\(i\)</span> 的機率為何</p>
+<p>所以 <span class="math inline">\(p(x_i|c_t)\prod_{l\neq
+i}p(x_l)\)</span> 的意思是：從 c
+中選了一個正樣本，其餘選了負樣本的意思</p>
+<p>分母的部就是全部的正樣本跟全部的負樣本</p>
+<p>最後可以發現我最後推導出來的式子，分子的部分與 PIM
+相似，是一個正比的關系，也就是說我們只要去優化這個 infoNCE
+就可以順便也優化了 MI</p>
+<p>下式 <span class="math inline">\(N\)</span>
+指的是負樣本的大小，所以下式可理解為，增加負樣本效果越好，而 MI
+也是越大越好 (代表兩者越近)，同時要最小化 infoNCE 的 loss 才能使 MI
+最大化 <span class="math display">\[
+I(x, c)\ge log(N)-\mathcal{L}_N
+\]</span></p>
+<h2 id="應用在-cv-的對比學習">應用在 CV 的對比學習</h2>
+<p>從上面的結論可知：<strong>負樣本的數量越多，效果越好</strong>，我們一共有兩種方法可以增加負樣本：</p>
+<ul>
+<li>把之前訓練過的負樣本存起來下次再用 -&gt; Memory Bank、MoCo</li>
+<li>直接增大 Batch Size -&gt; SimCLR</li>
+</ul>
+<p>看開始介紹之前，先來看看最基本的訓練過程。我們要把網路分成兩個部份 q
+k、其中 q 是 anchor 錨點、k 是正負樣本，兩個樣本獨立訓練，最後再用一個
+loss 函數統一在一起，query 會不斷的去與 key
+相比，看看是不是正樣本或負樣本</p>
+<p><img src="https://i.imgur.com/75CHVCI.png"
+alt="image-20220220164453375" /></p>
+<h3 id="memory-bank">Memory Bank</h3>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1805.01978.pdf">Unsupervised Feature
+Learning via Non-Parametric Instance Discrimination</a></p>
+<p>在一個 Batch 下，負樣本的數量是一定的 (除非啦…你的 Batch
+可以設超大)，在錢不夠的條件下，要如何增大負樣本數呢？</p>
+<p>一個做法是把上次訓練的負樣本「向量表示法」存起來，下一階段訓練時再隨機從
+memory bank 中拿取一定數量的負樣本，而因為 memory bank
+是一個記憶體的概念，所以沒有 Backpropagation 去更新參數</p>
+<p><img src="https://i.imgur.com/WyTTGI4.png"
+alt="image-20220220165121350" /></p>
+<h2 id="結論">結論</h2>
+<p>以上快速的帶過自監督學習的歷史，一路從自監督學習 -&gt; 應用在 NLP 上
+-&gt; 提出對比學習 -&gt; 應用在 CV
+上演進，而其效果也不斷的往監督式學習逼近。我認為對比學習還有很大的進步空間，尤其是看到了
+NLP 的成功，大家也不免俗的想要在 CV 上複製一份嘛 XD</p>
+<p>下一篇繼續來看看 2020 年由 FaceBook、Google
+兩大巨頭所提出對比學習的方法，兩篇都把對比學習往前推了一大步</p>
+<h2 id="reference">Reference</h2>
+<p><a
+target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1v5411x7rD?share_source=copy_web">bilibili
+講得很好的對比學習影片</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1Sa4y1x7Am?share_source=copy_web">bilibili
+自監督式學習 Loss 公式講解 (前半段)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/108906502">知乎大神自監督學習文章
+(本心得大部份都是參考它的，大推)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://ankeshanand.com/blog/2020/01/26/contrative-self-supervised-learning.html">自監督學習文章
+(英文)</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/05/08/MAE-Masked-Autoencoders-Are-Scalable-Vision-Learners-模仿-BERT-且更簡單的自監督學式/" rel="bookmark">MAE: Masked Autoencoders Are Scalable Vision Learners - 模仿 BERT 且更簡單的自監督學式</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/05/09/BERT-速讀-Pre-training-of-Deep-Bidirectional-Transformers-for-Language-Understanding-為自監督式學習打下標竿/" rel="bookmark">BERT 速讀 - Pre-training of Deep Bidirectional Transformers for Language Understanding - 為自監督式學習打下標竿</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/21/Contrastive-Learning-對比學習-MoCo-與-SimCLR/" rel="bookmark">Contrastive Learning 對比學習: MoCo 與 SimCLR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/25/DINO-Emerging-Properties-in-Self-Supervised-Vision-Transformers-把-Vision-Transformer-用在自監督學習上/" rel="bookmark">DINO: Emerging Properties in Self-Supervised Vision Transformers - 把 Vision Transformer 用在自監督學習上</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/22/Contrastive-Learning-對比學習-BYOL-與-SimSiam/" rel="bookmark">Contrastive Learning 對比學習: BYOL 與 SimSiam</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Self-supervised-Learning/" rel="tag"># Self-supervised Learning</a>
+              <a href="/tags/Contrastive-Learning/" rel="tag"># Contrastive Learning</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/" rel="prev" title="NFNet: High-Performance Large-Scale Image Recognition Without Normalization">
+      <i class="fa fa-chevron-left"></i> NFNet: High-Performance Large-Scale Image Recognition Without Normalization
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/21/Contrastive-Learning-%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-MoCo-%E8%88%87-SimCLR/" rel="next" title="Contrastive Learning 對比學習: MoCo 與 SimCLR">
+      Contrastive Learning 對比學習: MoCo 與 SimCLR <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E9%BA%BC%E6%98%AF%E8%87%AA%E7%9B%A3%E7%9D%A3%E5%AD%B8%E7%BF%92-self-supervised-learning"><span class="nav-number">1.</span> <span class="nav-text">什麼是自監督學習
+(Self-Supervised Learning)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E6%96%BC%E8%83%8C%E6%99%AF%E7%9A%84%E8%BC%94%E5%8A%A9%E4%BB%BB%E5%8B%99-pretext"><span class="nav-number">2.</span> <span class="nav-text">基於背景的輔助任務 (pretext)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8B%BC%E5%9C%96%E4%BB%BB%E5%8B%99"><span class="nav-number">2.1.</span> <span class="nav-text">拼圖任務</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%96%E7%A9%BA%E4%BB%BB%E5%8B%99"><span class="nav-number">2.2.</span> <span class="nav-text">挖空任務</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A1%8F%E8%89%B2%E9%A0%90%E6%B8%AC"><span class="nav-number">2.3.</span> <span class="nav-text">顏色預測</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%96%E7%89%87%E6%97%8B%E8%BD%89%E9%A0%90%E6%B8%AC"><span class="nav-number">2.4.</span> <span class="nav-text">圖片旋轉預測</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E8%80%A6%E7%89%B9%E5%BE%B5%E4%BA%92%E7%9B%B8%E5%AD%B8%E7%BF%92"><span class="nav-number">2.5.</span> <span class="nav-text">解耦特徵互相學習</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%88%87%E4%BB%BB%E5%8B%99%E7%9B%B8%E9%97%9C%E7%9A%84%E8%87%AA%E7%9B%A3%E7%9D%A3%E5%AD%B8%E7%BF%92-task-related-self-supervised-learning"><span class="nav-number">2.6.</span> <span class="nav-text">與任務相關的自監督學習
+(Task Related Self-Supervised Learning)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E6%96%BC%E6%99%82%E5%BA%8F%E7%9A%84%E8%BC%94%E5%8A%A9%E4%BB%BB%E5%8B%99"><span class="nav-number">3.</span> <span class="nav-text">基於時序的輔助任務</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E7%89%87%E4%B8%8A%E7%9A%84%E6%99%82%E5%BA%8F"><span class="nav-number">3.1.</span> <span class="nav-text">影片上的時序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92-contrastive-learning"><span class="nav-number">4.</span> <span class="nav-text">對比學習 Contrastive
+Learning</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#noise-contrastive-estimation-nce"><span class="nav-number">4.1.</span> <span class="nav-text">Noise-contrastive Estimation
+(NCE)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#infonce"><span class="nav-number">4.2.</span> <span class="nav-text">infoNCE</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%87%89%E7%94%A8%E5%9C%A8-cv-%E7%9A%84%E5%B0%8D%E6%AF%94%E5%AD%B8%E7%BF%92"><span class="nav-number">5.</span> <span class="nav-text">應用在 CV 的對比學習</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#memory-bank"><span class="nav-number">5.1.</span> <span class="nav-text">Memory Bank</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">6.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/02/17/Self-supervised-Learning-%E8%88%87-Contrastive-Learning-%E9%80%9F%E8%AE%80/";
+    this.page.identifier = "2022/02/17/Self-supervised-Learning-與-Contrastive-Learning-速讀/";
+    this.page.title = "Self-supervised Learning 與 Contrastive Learning 速讀";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

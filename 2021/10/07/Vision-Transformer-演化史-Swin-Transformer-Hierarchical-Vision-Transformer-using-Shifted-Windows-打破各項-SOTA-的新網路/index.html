@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="微軟提出 Shifted Windows，簡稱 Swin Transformer，目的是要解決 Transformer 在處理文本與處理影像差異的問題。然而效果卻出奇的好，甚至達到各項領域的 SOTA，在未來的幾篇論文介紹中也會繼續以 Swin 做為出發點。 https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2103.14030.pdf keywords: Swin Transformer、Shifte">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vision Transformer 演化史: Swin Transformer: Hierarchical Vision Transformer using Shifted Windows - 打破各項 SOTA 的新網路">
+<meta property="og:url" content="https://mushding.space/2021/10/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-%E6%89%93%E7%A0%B4%E5%90%84%E9%A0%85-SOTA-%E7%9A%84%E6%96%B0%E7%B6%B2%E8%B7%AF/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="微軟提出 Shifted Windows，簡稱 Swin Transformer，目的是要解決 Transformer 在處理文本與處理影像差異的問題。然而效果卻出奇的好，甚至達到各項領域的 SOTA，在未來的幾篇論文介紹中也會繼續以 Swin 做為出發點。 https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2103.14030.pdf keywords: Swin Transformer、Shifte">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/AZdaM1E.png">
+<meta property="og:image" content="https://i.imgur.com/cYvXzn0.png">
+<meta property="og:image" content="https://i.imgur.com/aCJj2hV.png">
+<meta property="og:image" content="https://i.imgur.com/mG3JoYk.png">
+<meta property="og:image" content="https://i.imgur.com/kdOG9Ve.png">
+<meta property="og:image" content="https://i.imgur.com/cYvXzn0.png">
+<meta property="og:image" content="https://i.imgur.com/Sx5Q2ya.png">
+<meta property="og:image" content="https://i.imgur.com/zb57ex9.png">
+<meta property="og:image" content="https://i.imgur.com/kYiySYr.png">
+<meta property="og:image" content="https://i.imgur.com/3AXzEGu.png">
+<meta property="og:image" content="https://i.imgur.com/OiKCryC.png">
+<meta property="og:image" content="https://i.imgur.com/fhJUFja.png">
+<meta property="og:image" content="https://i.imgur.com/jn2x2Um.png">
+<meta property="og:image" content="https://i.imgur.com/HQLqm3c.png">
+<meta property="og:image" content="https://i.imgur.com/VTqWFKm.png">
+<meta property="og:image" content="https://i.imgur.com/SmBBECI.png">
+<meta property="og:image" content="https://i.imgur.com/jmUlfwe.png">
+<meta property="og:image" content="https://i.imgur.com/Vz82yqF.png">
+<meta property="og:image" content="https://i.imgur.com/cm1G7Bj.png">
+<meta property="og:image" content="https://i.imgur.com/zWJO8Dd.png">
+<meta property="og:image" content="https://i.imgur.com/YOaTVpZ.png">
+<meta property="og:image" content="https://i.imgur.com/AkLOwMM.png">
+<meta property="article:published_time" content="2021-10-07T04:41:08.000Z">
+<meta property="article:modified_time" content="2022-02-23T03:21:45.660Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/AZdaM1E.png">
+
+<link rel="canonical" href="https://mushding.space/2021/10/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-%E6%89%93%E7%A0%B4%E5%90%84%E9%A0%85-SOTA-%E7%9A%84%E6%96%B0%E7%B6%B2%E8%B7%AF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Vision Transformer 演化史: Swin Transformer: Hierarchical Vision Transformer using Shifted Windows - 打破各項 SOTA 的新網路 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/10/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-%E6%89%93%E7%A0%B4%E5%90%84%E9%A0%85-SOTA-%E7%9A%84%E6%96%B0%E7%B6%B2%E8%B7%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Vision Transformer 演化史: Swin Transformer: Hierarchical Vision Transformer using Shifted Windows - 打破各項 SOTA 的新網路
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-10-07 12:41:08" itemprop="dateCreated datePublished" datetime="2021-10-07T12:41:08+08:00">2021-10-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-23 11:21:45" itemprop="dateModified" datetime="2022-02-23T11:21:45+08:00">2022-02-23</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/10/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-%E6%89%93%E7%A0%B4%E5%90%84%E9%A0%85-SOTA-%E7%9A%84%E6%96%B0%E7%B6%B2%E8%B7%AF/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/10/07/Vision-Transformer-演化史-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-打破各項-SOTA-的新網路/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>5k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>12 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>微軟提出 <strong>S</strong>hifted <strong>Win</strong>dows，簡稱 Swin
+Transformer，目的是要解決 Transformer
+在處理文本與處理影像差異的問題。然而效果卻出奇的好，甚至達到各項領域的
+SOTA，在未來的幾篇論文介紹中也會繼續以 Swin 做為出發點。</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2103.14030.pdf">https://arxiv.org/pdf/2103.14030.pdf</a></p>
+<p>keywords: Swin Transformer、Shifted Windows <span id="more"></span></p>
+<h2 id="abstract">1. Abstract</h2>
+<p>作者提出了 <strong>S</strong>hifted <strong>win</strong>dows 網路架構
+(<strong>Swin</strong> Transformer)，通過這個「移動視窗」架構可以使原本
+Transformer 的架構有以下兩個優點：</p>
+<ol type="1">
+<li>可以偵對不同圖片的大小 (Scale) 處理</li>
+<li>在時間複雜度上不受圖片大小而成平方關系 <span
+class="math inline">\(O(n^2)\)</span>，而是成線性關系 <span
+class="math inline">\(O(n)\)</span></li>
+</ol>
+<p>在各種電腦視覺領域上，Swin Transformer 也都刷新了各項
+SOTA，其中尤其以 semantic segmentation (ADE20K) 最為顯著</p>
+<h2 id="introduction">2. Introduction</h2>
+<h3 id="對偵對不同圖片的大小-scale-解釋">對偵對不同圖片的大小 (Scale)
+解釋</h3>
+<p>作者認為 CNN 與 Transformer
+兩個架構最大的不同在於「Scale」，也就是訓練資料的大小。在 NLP
+中一個「patch」就非常固定得為一個字詞 (ex：I am student -&gt; 分為 3 個
+patch)，而在最一開始的 Transformer 論文中，像是
+ViT，所選擇的做法也同像為固定 patch，把圖片固定切成 <span
+class="math inline">\(H/4 \cdot W/4\)</span> 個 patch，而每個 patch
+的大小不會隨著網路深度而改變，全部皆為 16x16。</p>
+<h3 id="時間複雜度上的解釋">時間複雜度上的解釋</h3>
+<p>與 NLP 相比，在影像上尤其是高解析度影像，如果單純使用 Transformer
+計算量會與圖片大小呈平方關系。而且如果是要全高解釋度的語意分割領域，使用
+Transformer 的效果一定不好。</p>
+<h3 id="overall-in-swint">Overall in SwinT</h3>
+<p>於是作者提出了 Swin Transformer，改進了以上兩點：</p>
+<ol type="1">
+<li><p>Patch size 會隨著網路越深，由小慢慢放大，而這一步的用意是為了模仿
+CNN 的全局視野會隨著網路越深視野越大 (在 CNN 中 kernel size
+不變，但圖片大小會變、在 Transformer 中 patch size
+會變，但圖片大小不變)。同時也因為這樣加入了多重解析度，可以應付更多電腦視覺的領域
+(其中以分割效果最好)</p></li>
+<li><p>會把圖片分割成 non-overlapping windows (不會重疊的視窗)，只單純在
+window 裡面做 self-attention，而非在整張圖片中做。因為一個 window
+中所包含的 patch number
+遠遠的小於圖片的大小，所以時間複雜度可以降到與圖片大小呈線性關系
+(在文章後續會細講)</p></li>
+</ol>
+<p><img src="https://i.imgur.com/AZdaM1E.png" alt="Image" /></p>
+<p>上圖灰色小格為一個 patch，紅色格子為一個 window。每個 window
+中包含固定數量的 patch，且 self-attention 只會在一個 window
+中做計算。同時也可發現 Swin Transformer 的 patch 與 window
+大小會隨著網路深度而變大，而且也有多重解析度的觀念在裡面。</p>
+<h3 id="shifted-window">shifted window</h3>
+<p>Swin Transformer 最核心的觀念就是 shitfed window。為了使 window 和
+window 之間也能學到彼此相關性，每做完一次 self-attention 後，window
+會往斜角的方向移動。</p>
+<p><img src="https://i.imgur.com/cYvXzn0.png" alt="Image" /></p>
+<h2 id="網路架構">3. 網路架構</h2>
+<p>先上完整架構圖，接下來慢慢由左至右一塊塊介紹</p>
+<p><img src="https://i.imgur.com/aCJj2hV.png" alt="Image" /></p>
+<h3 id="patch-partition">Patch Partition</h3>
+<p>與 ViT 一樣，會先經過一個 Patch embadding (SwinT 稱這一步為 Patch
+Partition) 的步驟，把三維 <span class="math inline">\(H\times W \times
+C\)</span> 的圖片表示成二維序列 <span class="math inline">\(N \times
+(P^2 \times C)\)</span></p>
+<p><img src="https://i.imgur.com/mG3JoYk.png"
+alt="image-20210710135026339" /></p>
+<p>在 SwinT 中，<span class="math inline">\(P\)</span> 預設是
+4，輸入圖片大小為 <span class="math inline">\(H\times W\times
+3\)</span>，所以網路的輸入維度是</p>
+<p><span class="math display">\[
+\begin{gathered}
+\frac{HW}{4^2} \times (4^2 \times 3) \\
+= \frac{H}{4}\times \frac{W}{4}\times 48
+\end{gathered}
+\]</span></p>
+<h3 id="stage-1">stage 1</h3>
+<h4 id="linear-embedding">Linear Embedding</h4>
+<p>在 stage 1 中會先經過一層 Linear Projection (SwinT 中稱 Linear
+Embedding)，簡單說就是 1x1 conv，把 48 維轉換成 C 維 (C
+會依照網路設計的大小而改變)</p>
+<h4 id="swin-transformer-block">Swin Transformer Block</h4>
+<p>接著會經過 Swin Transformer Block</p>
+<p><img src="https://i.imgur.com/kdOG9Ve.png" alt="Image" /></p>
+<p>由上圖可以發現 SwinT 與 ViT 最大的差別就在於，把 ViT 中的 MSA 改成
+W-MSA (Window-based MSA) 與 SW-MSA (Shifted Window-based MSA)</p>
+<p>其餘部份與 ViT 大部份相同，有一不同的地方在 MLP 的 activation
+function 從 ReLU 改為 GELU (嗯…可能受到了 BERT 的啟發吧…)</p>
+<h4 id="window-based-msa">Window-based MSA</h4>
+<p>主要設計是為了解決原 self-attention 計算複雜度為 <span
+class="math inline">\(O(N^2)\)</span> 的問題</p>
+<p>以下簡單介紹原 self-attention 計算量之算法</p>
+<p>計算出 <span class="math inline">\(QKV\)</span> 的公式：<span
+class="math inline">\(x\times W^Q\)</span>、<span
+class="math inline">\(x\times W^K\)</span>、<span
+class="math inline">\(x\times W^V\)</span> 一個需要 <span
+class="math inline">\(hwC^2\)</span>，三個就為 <span
+class="math inline">\(3hwC^2\)</span></p>
+<p>計算 <span class="math inline">\(QK^T\)</span> 需要 <span
+class="math inline">\((hw)^2C\)</span></p>
+<p>再計算乘以 <span class="math inline">\(V\)</span> 完整公式：<span
+class="math inline">\((QK^T)V\)</span> 也需要 <span
+class="math inline">\((hw)^2C\)</span></p>
+<p>最後得到的 Multi-Head 還要再乘上一個 <span
+class="math inline">\(W^Z\)</span> 需要 <span
+class="math inline">\(hwC^2\)</span></p>
+<p>所以總得來說原版 MSA 的計算量為</p>
+<p><span class="math display">\[
+\Omega(MSA) = 4hwC^2 + 2(hw)^2C
+\]</span></p>
+<p>在 SwinT 中 self-attention 只會在一個 window 中做</p>
+<p>所以 <span class="math inline">\(QK^T\)</span> 變成 <span
+class="math inline">\(\frac{h}{M}\frac{w}{M}\)</span> 再乘上 <span
+class="math inline">\((M^2)^2C\)</span> ，得到</p>
+<p><span class="math display">\[
+\Omega(W-MSA) = 4hwC^2 + 2M^2hwC
+\]</span></p>
+<p>而一個 window 所含的 patch size
+遠小於圖片大小，所以計算量就可以與圖片大小呈線性的關系了</p>
+<h4 id="shifted-window-based-msa">Shifted Window-based MSA</h4>
+<p><img src="https://i.imgur.com/cYvXzn0.png" alt="Image" /></p>
+<p>先前有提到為了使不同 window 間也能有關系，所以會把 window
+往斜上方移動，但移動後會產生幾個問題：</p>
+<ol type="1">
+<li>window 的數量變多了</li>
+<li>每個 window 的大小還不一樣</li>
+</ol>
+<p>因此我們沒辨法直接對移動過的 window 做self-attention。</p>
+<h5 id="cyclic-shift">cyclic shift</h5>
+<p>而作者提出了 cyclic shift
+來解決這個問題，把因位移而多出來的右上角，把它用搬的方法搬到了左下角，使得一張圖片中的
+window 數量維持一致，如下圖</p>
+<p><img src="https://i.imgur.com/Sx5Q2ya.png" alt="Image" /></p>
+<p>參考了知乎大神上更詳細的圖片，從左邊移成右邊</p>
+<p><img src="https://i.imgur.com/zb57ex9.png" alt="Image" /></p>
+<h5 id="masked-msa">masked MSA</h5>
+<p>但這又沿生出另一個問題，一個 window
+內有來自不同地方的區塊阿，像是上圖的右上角，一個 window 裡同時包含了 6
+和 4，如果直接做 self-attention 會…非常的不合理…，於是作者又提出了
+masked MSA，通過適當的遮罩使得來自不同區塊不會互相運算到</p>
+<p><img src="https://i.imgur.com/kYiySYr.png" alt="Image" /></p>
+<p>再次參考知乎大神的詳解，舉個例子來說明會更清楚。</p>
+<p><img src="https://i.imgur.com/3AXzEGu.png" alt="Image" /></p>
+<p>我們再次以右上角為例子，這個 window 內同時有 6 和 4。要怎麼設計 mask
+使得計算 attention 不會發生交疊呢？</p>
+<p>答案如下圖：</p>
+<p><img src="https://i.imgur.com/OiKCryC.png" alt="Image" /></p>
+<p>以此類推右下角的例子，有 4 個同時存在呢？</p>
+<p><img src="https://i.imgur.com/fhJUFja.png" alt="Image" /></p>
+<p>答案如下：</p>
+<p><img src="https://i.imgur.com/jn2x2Um.png" alt="Image" /></p>
+<p>按照上面的邏輯可以推出所有 window 內的狀況所對應的 mask 設計。透過 0
+1 的 mask 設計，可以使不同的區塊不會相互計算 attention 而影響。</p>
+<p>最後附上完整流程圖</p>
+<p><img src="https://i.imgur.com/HQLqm3c.png" alt="Image" /></p>
+<h3 id="stage-2-4">stage 2 ~ 4</h3>
+<h4 id="patch-merging">Patch Merging</h4>
+<p>接著到了新的 stage，在 stage 2 ~ 4 中都做著重複的動作，首先會經過一個
+Patch Merging，把剛剛 stage 1 所產生的 <span
+class="math inline">\(\frac{H}{4}\times \frac{W}{4}\times
+C\)</span>，以每一個 patch 階與相鄰的其它 2x2 patch concat
+起來，得到新的 <span class="math inline">\(\frac{H}{8}\times
+\frac{W}{8}\times 4C\)</span> ，如下圖</p>
+<p><img src="https://i.imgur.com/VTqWFKm.png" alt="Image" /></p>
+<p>再經過一層線性轉換，把 4C 變為 2C，得到 <span
+class="math inline">\(\frac{H}{8}\times \frac{W}{8}\times
+2C\)</span>，就是 stage 2 的輸入了，如下圖</p>
+<p><img src="https://i.imgur.com/SmBBECI.png" alt="Image" /></p>
+<p>會做 Patch Merging 的理由是模仿 U-Net 或是一般 CNN
+中的多重解析度，藉由不斷的合併相鄰 patch 使得越深的網路，patch
+的視野越大。</p>
+<p>最後再做跟 stage 1 一樣的 Swin Transformer
+Block，就是完整的網路了。</p>
+<h3 id="relative-position-bias">Relative position bias</h3>
+<p>Swin Transformer 在設計 Self-Attention 時，參考了 ViT
+的設計之外，還額外加入了一個 Bias <span
+class="math inline">\(B\)</span>，使得式變為以下：</p>
+<p><span class="math display">\[
+\mathrm{Attention}(Q,K,V) = \mathrm{SoftMax}(\frac{QK^T}{\sqrt{d}}+B)V
+\]</span></p>
+<p>作者稱這個 Bias 為 relative position
+bias，為網路填加了額外的值置資訊</p>
+<p>而這個 <span class="math inline">\(B\)</span>
+不是隨機生成出來的，而是透過一系列算法生出來的，詳細可見以下知乎大神的
+source code 解釋：</p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_42364196/article/details/119954379">https://blog.csdn.net/weixin_42364196/article/details/119954379</a></p>
+<p>後面作者有用實驗比較一些 position 加入的方法，包含 absolute
+position、reletive position</p>
+<p>發現： * 有 shifted window 比沒有 shifted 效果來得好 * 加了 absolute
+position 效果不是最好的 * 使用 reletive position bias 效果是最好的</p>
+<p>(下圖中的 w/o app. 指的是第一個 Attention 公式沒有 Attenion，只有
+B)</p>
+<p><img src="https://i.imgur.com/jmUlfwe.png" alt="Image" /></p>
+<h2 id="experiments">4. Experiments</h2>
+<h3 id="分類-imagenet-上的實驗">分類 ImageNet 上的實驗</h3>
+<p><img src="https://i.imgur.com/Vz82yqF.png" alt="Image" /></p>
+<h3 id="偵測-coco-上的實驗">偵測 COCO 上的實驗</h3>
+<p><img src="https://i.imgur.com/cm1G7Bj.png" alt="Image" /></p>
+<p><img src="https://i.imgur.com/zWJO8Dd.png" alt="Image" /></p>
+<h3 id="語意分割-ade20k-上的實驗">語意分割 ADE20K 上的實驗</h3>
+<p><img src="https://i.imgur.com/YOaTVpZ.png" alt="Image" /></p>
+<p>可看到不管在哪一個領域上 SwinT 皆打敗了所有目前的 Transformer
+網路，而與傳統 CNN 網路相比 (EfficientNet) 效果我認為是不相上下</p>
+<p>值得注意的是 SwinT 在語義分割的題目表現特別好，好超過 3 個
+ticks，連在 SOTA 的網站中都可以看到明顯的差距</p>
+<p><img src="https://i.imgur.com/AkLOwMM.png" alt="Image" /></p>
+<h2 id="結論">結論</h2>
+<p>我自己讀完乍看之下，好像與直接前幾篇論文的 proposal
+差不多，不外乎就是模仿 CNN
+或是減少運算量。但如果真的照著論文給的實驗結果，SwinT
+的效果也好太多，真的有點神奇。</p>
+<p>如果現在在 Google 上搜尋 SwinT
+也常常會找到什麼屠榜之類的標題，我自己是覺得有點過頭了啦，論文實驗歸實驗，真正要在現實實作上發揮功能才是最重要的部份。(例如測資多寡的問題)</p>
+<p>不過這個論文倒是開了一個「Swin」風潮，希望再過個半年到一年，能把「Swin」的觀念再發揮的成熟一些，讓大家知道
+Transformer 的厲害哈哈</p>
+<h2 id="reference">Reference</h2>
+<p>https://www.youtube.com/watch?v=SndHALawoag</p>
+<p>https://zhuanlan.zhihu.com/p/360513527</p>
+<p>https://zhuanlan.zhihu.com/p/404001918</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/10/04/%E5%90%88%E6%AD%A1%E5%B1%B1%E4%B8%8A%E7%9C%8B%E6%98%9F%E6%98%9F-%E5%90%88%E6%AD%A1%E5%B1%B1%E4%B8%BB%E5%B3%B0%E5%8C%97%E5%B3%B0%E5%85%A9%E5%A4%A9%E4%B8%80%E5%A4%9C%E9%81%8A-%E4%BA%8C/" rel="prev" title="合歡山上看星星 - 合歡山主峰北峰兩天一夜遊 (二)">
+      <i class="fa fa-chevron-left"></i> 合歡山上看星星 - 合歡山主峰北峰兩天一夜遊 (二)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/10/21/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-CoAtNet-Marrying-Convolution-and-Attention-for-All-Data-Sizes-%E4%BD%BF%E7%94%A8-Depthwise-Conv-%E4%BE%86%E7%B5%90%E5%90%88-CNN-%E8%88%87-Transformer/" rel="next" title="Vision Transformer 演化史: CoAtNet: Marrying Convolution and Attention for All Data Sizes - 使用 Depthwise Conv 來結合 CNN 與 Transformer">
+      Vision Transformer 演化史: CoAtNet: Marrying Convolution and Attention for All Data Sizes - 使用 Depthwise Conv 來結合 CNN 與 Transformer <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#abstract"><span class="nav-number">1.</span> <span class="nav-text">1. Abstract</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">2.</span> <span class="nav-text">2. Introduction</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8D%E5%81%B5%E5%B0%8D%E4%B8%8D%E5%90%8C%E5%9C%96%E7%89%87%E7%9A%84%E5%A4%A7%E5%B0%8F-scale-%E8%A7%A3%E9%87%8B"><span class="nav-number">2.1.</span> <span class="nav-text">對偵對不同圖片的大小 (Scale)
+解釋</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%99%82%E9%96%93%E8%A4%87%E9%9B%9C%E5%BA%A6%E4%B8%8A%E7%9A%84%E8%A7%A3%E9%87%8B"><span class="nav-number">2.2.</span> <span class="nav-text">時間複雜度上的解釋</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#overall-in-swint"><span class="nav-number">2.3.</span> <span class="nav-text">Overall in SwinT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#shifted-window"><span class="nav-number">2.4.</span> <span class="nav-text">shifted window</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">3.</span> <span class="nav-text">3. 網路架構</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#patch-partition"><span class="nav-number">3.1.</span> <span class="nav-text">Patch Partition</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stage-1"><span class="nav-number">3.2.</span> <span class="nav-text">stage 1</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#linear-embedding"><span class="nav-number">3.2.1.</span> <span class="nav-text">Linear Embedding</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#swin-transformer-block"><span class="nav-number">3.2.2.</span> <span class="nav-text">Swin Transformer Block</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#window-based-msa"><span class="nav-number">3.2.3.</span> <span class="nav-text">Window-based MSA</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#shifted-window-based-msa"><span class="nav-number">3.2.4.</span> <span class="nav-text">Shifted Window-based MSA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#cyclic-shift"><span class="nav-number">3.2.4.1.</span> <span class="nav-text">cyclic shift</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#masked-msa"><span class="nav-number">3.2.4.2.</span> <span class="nav-text">masked MSA</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stage-2-4"><span class="nav-number">3.3.</span> <span class="nav-text">stage 2 ~ 4</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#patch-merging"><span class="nav-number">3.3.1.</span> <span class="nav-text">Patch Merging</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#relative-position-bias"><span class="nav-number">3.4.</span> <span class="nav-text">Relative position bias</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiments"><span class="nav-number">4.</span> <span class="nav-text">4. Experiments</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%86%E9%A1%9E-imagenet-%E4%B8%8A%E7%9A%84%E5%AF%A6%E9%A9%97"><span class="nav-number">4.1.</span> <span class="nav-text">分類 ImageNet 上的實驗</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%81%B5%E6%B8%AC-coco-%E4%B8%8A%E7%9A%84%E5%AF%A6%E9%A9%97"><span class="nav-number">4.2.</span> <span class="nav-text">偵測 COCO 上的實驗</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AA%9E%E6%84%8F%E5%88%86%E5%89%B2-ade20k-%E4%B8%8A%E7%9A%84%E5%AF%A6%E9%A9%97"><span class="nav-number">4.3.</span> <span class="nav-text">語意分割 ADE20K 上的實驗</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">5.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/10/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-%E6%89%93%E7%A0%B4%E5%90%84%E9%A0%85-SOTA-%E7%9A%84%E6%96%B0%E7%B6%B2%E8%B7%AF/";
+    this.page.identifier = "2021/10/07/Vision-Transformer-演化史-Swin-Transformer-Hierarchical-Vision-Transformer-using-Shifted-Windows-打破各項-SOTA-的新網路/";
+    this.page.title = "Vision Transformer 演化史: Swin Transformer: Hierarchical Vision Transformer using Shifted Windows - 打破各項 SOTA 的新網路";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="2021 10 月 Apple 基於 Transformer 提出 MobileViT 架構，其主要目的是把 Transformer 輕量化，以達到能在移動設備上部署。 本篇最主要的方法為結合 MobileNet 與 Transformer，得到效果好、效率也不錯的架構 https:&#x2F;&#x2F;arxiv.org&#x2F;abs&#x2F;2110.02178 keywords: MobileViT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer">
+<meta property="og:url" content="https://mushding.space/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="2021 10 月 Apple 基於 Transformer 提出 MobileViT 架構，其主要目的是把 Transformer 輕量化，以達到能在移動設備上部署。 本篇最主要的方法為結合 MobileNet 與 Transformer，得到效果好、效率也不錯的架構 https:&#x2F;&#x2F;arxiv.org&#x2F;abs&#x2F;2110.02178 keywords: MobileViT">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/W2Q0mH6.png">
+<meta property="og:image" content="https://i.imgur.com/NsWeQJX.png">
+<meta property="og:image" content="https://i.imgur.com/GX6A0uO.png">
+<meta property="og:image" content="https://i.imgur.com/89weffQ.png">
+<meta property="og:image" content="https://i.imgur.com/X8NtFGR.png">
+<meta property="og:image" content="https://i.imgur.com/uRodGGI.png">
+<meta property="og:image" content="https://i.imgur.com/pUnohgN.png">
+<meta property="og:image" content="https://i.imgur.com/FgcgUeb.png">
+<meta property="og:image" content="https://i.imgur.com/WLRikce.png">
+<meta property="article:published_time" content="2022-01-27T07:14:00.000Z">
+<meta property="article:modified_time" content="2022-02-23T03:24:34.210Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/W2Q0mH6.png">
+
+<link rel="canonical" href="https://mushding.space/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-01-27 15:14:00" itemprop="dateCreated datePublished" datetime="2022-01-27T15:14:00+08:00">2022-01-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-23 11:24:34" itemprop="dateModified" datetime="2022-02-23T11:24:34+08:00">2022-02-23</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.7k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>9 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>2021 10 月 Apple 基於 Transformer 提出 MobileViT 架構，其主要目的是把
+Transformer 輕量化，以達到能在移動設備上部署。</p>
+<p>本篇最主要的方法為結合 MobileNet 與
+Transformer，得到效果好、效率也不錯的架構</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/abs/2110.02178">https://arxiv.org/abs/2110.02178</a></p>
+<p>keywords: MobileViT <span id="more"></span></p>
+<h2 id="introduction">Introduction</h2>
+<p>作者開頭就提到，CNN 有 Inductive bias，ViT
+則沒有，因此需要更多的資料或是用 L2Norm 來達到類似效果，在 ViT 使用
+Self-Attention
+運算量大以及資料量需求大下，自然是沒辨法輕易的部署到移動設備上了。</p>
+<p>而本篇作者借鏡了 2019 年的 MobileNet v3 架構，提出 MobileViT
+架構。MobileViT 試著結合了 CNN 與 Transformer
+各自的優點，達成在相同低參數量下效果比 CNN 好</p>
+<p>MobileViT 在 ImageNet 上 top-1 準確率為 78.4%，參數使用量為 6M，比
+MobileNet v3 高出 3.2%，比 DeiT 高出 6.2%。也在偵測 MS-COCO 上比
+MobileNet v3 高出 5.7%</p>
+<h2 id="網路架構">網路架構</h2>
+<p>MobileViT 有三個目標：Light-weight 輕量化、Genral-purpose
+歸納能力強、Low latency 低延遲</p>
+<p>而作者在設計架構時認為：CNN 的特色為：有 Inductive Bias
+歸納能力強，Transformer
+的特色為：可以關注到全局的資訊，但計算量大，因此採用：「以 CNN 為主，把
+Transformer 融合到 CNN 架構中」</p>
+<p>首先來上整體架構圖：</p>
+<p><img src="https://i.imgur.com/W2Q0mH6.png"
+alt="image-20220127160654393" /></p>
+<p>整體架構圖不難發現，粉紅色的地方為 MV2 (MobileNet v2) 塊，是 CNN
+的部份，而且占網路大多數，而綠色才是 MobileViT Transformer
+的部份，只占了三格而已</p>
+<p>借著 MobileNet v2 Block 減少圖片解析度，獲得多重解析度，再經過
+MobileNet v2 達到類似 Attention 的效果</p>
+<h3 id="unfold---matmul---fold">Unfold -&gt; Matmul -&gt; Fold</h3>
+<p>在介紹一個 MobileViT Block 內部架構前，先來了解一下 CNN
+的運算，通常我們在 pytorch 中設計 CNN 會使用到許多卷積運算 (Conv)</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.nn.functional.conv2d(inp, w)</span><br></pre></td></tr></table></figure>
+<p>但根據這篇作者以及 <a
+target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html">pytorch
+官網</a>上的敘述，一個 Conv 可以拆分成三個部份：Unfold、Matmul、Fold</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">inp = torch.randn(<span class="number">1</span>, <span class="number">3</span>, <span class="number">10</span>, <span class="number">12</span>)</span><br><span class="line">w = torch.randn(<span class="number">32</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>)</span><br><span class="line"><span class="comment"># Unfold</span></span><br><span class="line">inp_unf = torch.nn.functional.unfold(inp, (<span class="number">4</span>, <span class="number">5</span>))</span><br><span class="line"><span class="comment"># Matmul</span></span><br><span class="line">out_unf = inp_unf.transpose(<span class="number">1</span>, <span class="number">2</span>).matmul(w.view(w.size(<span class="number">0</span>), -<span class="number">1</span>).t()).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line"><span class="comment"># Fold</span></span><br><span class="line">out = torch.nn.functional.fold(out_unf, (<span class="number">7</span>, <span class="number">8</span>), (<span class="number">1</span>, <span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+<p>上面那三個東西是什麼呢？下面這張圖可以清楚的表示：圖片來源：<a
+target="_blank" rel="noopener" href="https://blog.csdn.net/u010087338/article/details/113666140">https://blog.csdn.net/u010087338/article/details/113666140</a></p>
+<p><img src="https://i.imgur.com/NsWeQJX.png"
+alt="image-20220127162459106" /></p>
+<p>我們一般認識的卷積運算就是一張圖片 <span
+class="math inline">\(\mathbb{R}^{w_0\times h_0 \times c_0}\)</span>
+對一個 kernel <span class="math inline">\(\mathbb{R}^{w_k\times
+h_k\times c_1}\)</span> 做矩陣乘法後，得到結果 <span
+class="math inline">\(\mathbb{R}^{w_1\times h_1\times c_1}\)</span>
+的結程。但是我們也可以手動的設計上面這一系列步驟。</p>
+<p>首先是 Unfold，它可以將輸入「切成」對應 kernel
+大小的塊，並把塊「轉換維度」至序列。程式如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.nn.Unfold(kernel_size, dilation=<span class="number">1</span>, padding=<span class="number">0</span>, stride=<span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<p>可以發現跟 Conv 很像，它也有 kernel_size、stride …等等參數設定，但與
+Conv 最大的不同在於，Unfold 只有「切」而已，不負責「運算」。</p>
+<p>可以參考上圖中下部份，假設原圖 1x3x10x12 (Batch, Channel, H,
+W)，kernel 大小 32x3x4x5 (Channel_out, Channel_in, H, W)，在 stride 為 1
+下，我們可以「切」出 (10-4+1)x(12-5+1) = 56 個 3x4x5
+塊，再把這個塊「轉化維度」至序列得到 1x56x(3x4x5) = 1x56x60</p>
+<p>再來是 Matmul 也就是矩陣乘法，把得到的 1x56x60 乘上 kernel (3x4x5)x32
+= 60x32，最後會得到 1x56x32 的結果</p>
+<p>再來是 Fold，這一步的用意是把序列「轉換維度」回塊，把 1x56x32 轉回成
+1x32x7x8，當然也可以直接用 view 直接設定維度來達成</p>
+<p>根據 pytorch 官網，CNN 與 Unfold 三部曲的運算是等價的。而本篇
+MobileViT 正是利用這個特性，把原本的 CNN 拆成三個步驟，並且把中間的
+Matmul 核心運算層，更改為 Transformer
+運算。就是這麼剛好，中間那層是一個序列維度的資料，正好適合放進
+Transformer 中。</p>
+<h3 id="mobilevit-block">MobileViT Block</h3>
+<p>先上圖</p>
+<p><img src="https://i.imgur.com/GX6A0uO.png"
+alt="image-20220127160530959" /></p>
+<p>流程為：</p>
+<ol type="1">
+<li>首先會做一個 nxn conv 運算 (論文 n=3) 得到局部特徵</li>
+<li>再來做一個 1x1 conv 放大特徵圖數量</li>
+<li>接著進行：Unfold -&gt; Transformer -&gt; Fold 得到全局特徵</li>
+<li>再用一個 1x1 conv 回到原特徵圖數量</li>
+<li>用一個 shortcut 把原輸入與剛剛經 Transformer 的結果相加</li>
+<li>最後用一個 nxn conv 調整回原圖大小，使得輸入與輸出維度不變</li>
+</ol>
+<p>理論上「單層」 MobileViT 的運算複雜度為 <span
+class="math inline">\(O(N^2Pd)\)</span> 而 ViT 的則是 <span
+class="math inline">\(O(N^2d)\)</span>，看起來運算量反而變高了，但是作者解釋，MobileViT
+因有 1 2 步的 CNN 得到局部特徵，加上模仿 CNN 的 Unfold Fold 架構，使得
+MobileViT 有更強的 Inductive Bias
+能力，在網路設計上可以使用效少的層數得到相同的效果。</p>
+<p>以 ViT based 的 DeiT 為對照組，DeiT 需要 L=12, d=192，而 MobileViT
+L={2, 4, 3}, d={96, 120, 144} 均少於 DeiT</p>
+<h3 id="mobilevit-vs-vit">MobileViT vs ViT</h3>
+<p>ViT 網路中有一步 Patch Embedding 實質上就是在把一影像，分成一個 Patch
+一個 Patch 彼此不 overlap 的序列，而 MobileViT 套用了 CNN stride
+的概念，每個 Patch 之間是會 overlap 的，並且彼此間距為 stride 1</p>
+<p>但是這樣看起來 MobileViT 分 Patch 的數量比 ViT
+多上不少，運算量應該會更大，但 MobileViT 藉由優秀的特徵提取，可以比 ViT
+少了非常多層，變向減少計算量</p>
+<p>另外因 MobileViT 結合了 CNN 與 Transformer
+的優點，可以達到全域局部特徵都可觀察到的特色，如下圖所示，中心紅色點會達距離的藍色點計算
+(Transformer)，藍色點也會和周邊其它的點計算 (CNN)</p>
+<p><img src="https://i.imgur.com/89weffQ.png"
+alt="image-20220129003704991" /></p>
+<h2 id="experiments">Experiments</h2>
+<h3 id="網路家族">網路家族</h3>
+<p>作者設計了三個不同大小的網路，特別的是，網路是設計的越來越小</p>
+<p><img src="https://i.imgur.com/X8NtFGR.png"
+alt="image-20220127172148824" /></p>
+<p>以及三種不同大小網路的效果</p>
+<p><img src="https://i.imgur.com/uRodGGI.png"
+alt="image-20220129012458883" /></p>
+<h3 id="參數量-vs-分類效果">參數量 vs 分類效果</h3>
+<p>作者與 Transformer 做比較，不清楚為什麼沒有與 Swin 作比較</p>
+<p><img src="https://i.imgur.com/pUnohgN.png"
+alt="image-20220129012108102" /></p>
+<h3 id="偵測上的結果">偵測上的結果</h3>
+<p><img src="https://i.imgur.com/FgcgUeb.png"
+alt="image-20220129012312539" /></p>
+<h3 id="分割上的結果">分割上的結果</h3>
+<p><img src="https://i.imgur.com/WLRikce.png"
+alt="image-20220129012434838" /></p>
+<h2 id="結論">結論</h2>
+<p>MobileViT 又是一篇整合了 CNN 與 Transformer
+的論文，比較創新的地方在是以「減少運算量為目標」</p>
+<p>網路架構主要還是以 MobileNet 為主，以 Transformer 為輔，並且利用
+Unfold -&gt; Matmul -&gt; Fold 的方法巧妙融合 CNN 與
+Transformer。這種方法使得與 MobileNet 在相同參數下效果好上了不少</p>
+<h2 id="reference">Reference</h2>
+<p><a
+target="_blank" rel="noopener" href="https://aijishu.com/a/1060000000243736">網路上參考的筆記1</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/u014546828/article/details/120741293">網路上參考的筆記2</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/u010087338/article/details/113666140">图解卷积计算原理与pytorch中fold和unfold函数的使用
+(圖)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/LoseInVain/article/details/88139435">pytorch手动实现滑动窗口操作，论fold和unfold函数的使用
+(解說)</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/xinjieyuan/article/details/105232802">pytorch
+transpose() 和 permute()</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/york1996/article/details/81949843">pytorch
+view()</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/01/23/AutoML-EfficientNet-%E5%9B%9E%E9%A0%AD%E9%96%B1%E8%AE%80/" rel="prev" title="AutoML - MobileNet v1~v3 與 EfficientNet v1 回頭閱讀">
+      <i class="fa fa-chevron-left"></i> AutoML - MobileNet v1~v3 與 EfficientNet v1 回頭閱讀
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/12/NFNet-High-Performance-Large-Scale-Image-Recognition-Without-Normalization/" rel="next" title="NFNet: High-Performance Large-Scale Image Recognition Without Normalization">
+      NFNet: High-Performance Large-Scale Image Recognition Without Normalization <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">1.</span> <span class="nav-text">Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">2.</span> <span class="nav-text">網路架構</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#unfold---matmul---fold"><span class="nav-number">2.1.</span> <span class="nav-text">Unfold -&gt; Matmul -&gt; Fold</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mobilevit-block"><span class="nav-number">2.2.</span> <span class="nav-text">MobileViT Block</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mobilevit-vs-vit"><span class="nav-number">2.3.</span> <span class="nav-text">MobileViT vs ViT</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiments"><span class="nav-number">3.</span> <span class="nav-text">Experiments</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E5%AE%B6%E6%97%8F"><span class="nav-number">3.1.</span> <span class="nav-text">網路家族</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%83%E6%95%B8%E9%87%8F-vs-%E5%88%86%E9%A1%9E%E6%95%88%E6%9E%9C"><span class="nav-number">3.2.</span> <span class="nav-text">參數量 vs 分類效果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%81%B5%E6%B8%AC%E4%B8%8A%E7%9A%84%E7%B5%90%E6%9E%9C"><span class="nav-number">3.3.</span> <span class="nav-text">偵測上的結果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%86%E5%89%B2%E4%B8%8A%E7%9A%84%E7%B5%90%E6%9E%9C"><span class="nav-number">3.4.</span> <span class="nav-text">分割上的結果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">4.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/";
+    this.page.identifier = "2022/01/27/MobileViT-Light-weight-General-purpose-and-Mobile-friendly-Vision-Transformer/";
+    this.page.title = "MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

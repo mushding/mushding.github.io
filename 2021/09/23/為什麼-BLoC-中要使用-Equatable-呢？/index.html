@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="這幾天在學 flutter ，看到大家說當程式大起來的時候，state 會不好整理及控制。而 React 中有 Redux ，在 flutter 中大家最受歡迎的方法是 flutter_bloc ，以下簡單筆記我學 BLoC 的一些心路歷程 keywords: BLoC、Equatable">
+<meta property="og:type" content="article">
+<meta property="og:title" content="為什麼 BLoC 中要使用 Equatable 呢？">
+<meta property="og:url" content="https://mushding.space/2021/09/23/%E7%82%BA%E4%BB%80%E9%BA%BC-BLoC-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-Equatable-%E5%91%A2%EF%BC%9F/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="這幾天在學 flutter ，看到大家說當程式大起來的時候，state 會不好整理及控制。而 React 中有 Redux ，在 flutter 中大家最受歡迎的方法是 flutter_bloc ，以下簡單筆記我學 BLoC 的一些心路歷程 keywords: BLoC、Equatable">
+<meta property="og:locale" content="zh_TW">
+<meta property="article:published_time" content="2021-09-22T16:43:54.000Z">
+<meta property="article:modified_time" content="2021-09-22T16:47:06.060Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="BLoC">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://mushding.space/2021/09/23/%E7%82%BA%E4%BB%80%E9%BA%BC-BLoC-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-Equatable-%E5%91%A2%EF%BC%9F/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>為什麼 BLoC 中要使用 Equatable 呢？ | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/09/23/%E7%82%BA%E4%BB%80%E9%BA%BC-BLoC-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-Equatable-%E5%91%A2%EF%BC%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          為什麼 BLoC 中要使用 Equatable 呢？
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2021-09-23 00:43:54 / 修改時間：00:47:06" itemprop="dateCreated datePublished" datetime="2021-09-23T00:43:54+08:00">2021-09-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Dart-Flutter-%E9%96%8B%E7%99%BC/" itemprop="url" rel="index"><span itemprop="name">Dart & Flutter 開發</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/09/23/%E7%82%BA%E4%BB%80%E9%BA%BC-BLoC-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-Equatable-%E5%91%A2%EF%BC%9F/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/09/23/為什麼-BLoC-中要使用-Equatable-呢？/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.1k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>8 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>這幾天在學 flutter ，看到大家說當程式大起來的時候，state
+會不好整理及控制。而 React 中有 Redux ，在 flutter
+中大家最受歡迎的方法是 flutter_bloc ，以下簡單筆記我學 BLoC
+的一些心路歷程</p>
+<p>keywords: BLoC、Equatable <span id="more"></span></p>
+<h2 id="為什麼-bloc-中要使用-equatable-呢">為什麼 BLoC 中要使用
+Equatable 呢？</h2>
+<p>在了解為什麼要使用 Equatable 之前，我們先來看看什麼是
+equals、hashCode</p>
+<h3 id="vs-equals-vs-hashcode">== vs equals vs hashcode</h3>
+<p>最初在使用這些觀念的語言是 Java，而 Java
+對於以上三個值有不同的定義</p>
+<p>所謂「==」是指符號兩邊的「記憶體位值」是否相等，兩對象是不是參考同一個位置</p>
+<p>而 equal 則是 Java 提供的一個 Override 方法，如果我們沒有特別去
+Override 它的話，功能就與 「==」一致。那什麼時候我們會用到 equal
+呢？當我們今天要比較的資料是自定義的 class 時，如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">People</span> </span>&#123;</span><br><span class="line">	String shirt_color;</span><br><span class="line">	<span class="keyword">int</span> age;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>要怎麼比較兩個不同的 People 呢？不太可能直接用 ==
+來比較吧，這個時候我們就會用到 equal ，把原本的定義 override
+加上自己的定義</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">People Tom = <span class="keyword">new</span> People(<span class="string">&quot;blue&quot;</span>, <span class="number">20</span>);</span><br><span class="line">People Alex = <span class="keyword">new</span> People(<span class="string">&quot;red&quot;</span>, <span class="number">15</span>);</span><br><span class="line"></span><br><span class="line">Tom == Alex <span class="comment">// ??!!</span></span><br></pre></td></tr></table></figure>
+<p>像上面這個例子中 People 中有兩個 member，shirt_color 以及
+age，因此在實作 equal 時，要特別去比較這兩個 member
+的值是否相等，完整程式如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EqualsDemo</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> String shirt_color;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">int</span> age;</span><br><span class="line"> </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object o)</span> </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// (一) </span></span><br><span class="line">  	<span class="keyword">if</span> (<span class="keyword">this</span> == o) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  	</span><br><span class="line">    <span class="comment">// (二)</span></span><br><span class="line">    <span class="keyword">if</span> (o == <span class="keyword">null</span> || getClass() != o.getClass()) <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  	</span><br><span class="line">    <span class="comment">// (三)</span></span><br><span class="line">    EqualsDemo that = (EqualsDemo) o;</span><br><span class="line">  	<span class="keyword">if</span> (name != <span class="keyword">null</span> ? !name.equals(that.name) : that.name != <span class="keyword">null</span>) </span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  	</span><br><span class="line">    <span class="keyword">return</span> info != <span class="keyword">null</span> ? info.equals(that.info) : that.info == <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">hashCode</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  	<span class="keyword">int</span> result = name != <span class="keyword">null</span> ? name.hashCode() : <span class="number">0</span>;</span><br><span class="line">  	result = <span class="number">31</span> * result + (info != <span class="keyword">null</span> ? info.hashCode() : <span class="number">0</span>);</span><br><span class="line">  	<span class="keyword">return</span> result;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到 (三) 的地方，我們自己多自定義比較 shirt_color 與 age
+是否相同，來符合我們的需求</p>
+<p>那 (一) 與 (二) 呢？這裡就要先提到 equals() 的 4 個特性</p>
+<ol type="1">
+<li>反射性：<code>x.equals(x)</code> 必需是 True</li>
+<li>非空性：<code>x.equals(null)</code> 必需是 False</li>
+<li>對稱性：<code>x.equals(y)</code> 與 <code>y.equals(x)</code>
+必需同時成立</li>
+<li>類推性：如果 <code>x.equals(y)</code> True、
+<code>y.equals(z)</code> True 則 <code>x.equals(z)</code> 也必定
+True</li>
+</ol>
+<p>而式中的 (一) (二) 正是實作了 equals()
+的前兩個特性，確保不違反定律</p>
+<p>但是最下面為什麼還要再 override hashCode 呢？所謂的 hashCode 是
+<strong>Java 把變數所存的實體記憶體位置經過一個 hashmap
+後得到的值</strong>，在 Java 中每一個變數都會有一個獨一無二的 hashCode
+，如果它們是同一個變數，則 hashCode 會相同</p>
+<p>那為什麼要這樣設計呢？假設我們今天有 1000 個變數，今天新增第 1001
+個變數，我們要怎麼知道這第 1001 變數是不是與前 1000
+的其中一個相同呢？當然最笨的方法就是一個一個找，可是太沒效率了。於是
+hashCode 就來解決這個問題，hashCode 利用 hashmap
+的特性來達到：只要是同一個變數，則 hashCode 就會相同</p>
+<p>注意 hash 的小細節喔！</p>
+<ul>
+<li>兩對象相等，所產生的 hashCode 一定一樣</li>
+<li>兩 hashCode 一樣，不一定代表這兩個對象相等喔 (因為 hash 的
+collide)</li>
+</ul>
+<p>總結：如果要在 Java 中 override 「==」的話，除了要 override equals
+比較其它自定變數，也要 override hashCode
+記這這個為了加速了誕生的東西，不然會產生兩相同對象但 hashCode
+不同的事情發生</p>
+<h3 id="bloc-與-equatable">BLoC 與 Equatable</h3>
+<p>經過上面的解釋可以了解了 equal 以及 hashCode，而 Dart 與 Java
+類似也有相同的概念，於是有了 Equatable 這個套件讓我們不用再手動 override
+equal 以及 hashCode 了，它會自動幫我們做這一件事情</p>
+<p>只是…為什麼 BLoC 中要使用到它呢？</p>
+<p>當我們建立一個 class 繼承 Equatable 時，我們可確保 LoginStates
+是唯一的，當這個 state
+發生兩次以上時，不會再一個一模一樣的呼叫，也不會再重建裡面全部的
+Widget</p>
+<figure class="highlight dart"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">LoginStates</span> <span class="keyword">extends</span> <span class="title">Equatable</span></span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+<p>或者是 Stream 與 Equatable 之間，當 Stream 中有兩個一模一樣的 state
+被呼叫時，第二個會自動省略</p>
+<figure class="highlight dart"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@override</span></span><br><span class="line">Stream&lt;LoginStates&gt; mapEventToState(MyEvent event) <span class="keyword">async</span>* &#123;</span><br><span class="line">  <span class="keyword">yield</span> LoginData(<span class="keyword">true</span>, <span class="string">&#x27;Hello User&#x27;</span>);</span><br><span class="line">  <span class="keyword">yield</span> LoginData(<span class="keyword">true</span>, <span class="string">&#x27;Hello User&#x27;</span>); <span class="comment">// This will be avoided</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>更詳細的解說可以到以下網址：<a
+target="_blank" rel="noopener" href="https://medium.com/flutterworld/flutter-equatable-its-use-inside-bloc-7d14f3b5479b">https://medium.com/flutterworld/flutter-equatable-its-use-inside-bloc-7d14f3b5479b</a></p>
+<h3 id="結論">結論</h3>
+<p>Equatable 省下了我們 override equals 與 hashCode 的時間</p>
+<p>而 BLoC 中加入 Equatable 可以避免重覆 state 不必要的重覆呼叫及重建
+Widget，優化了速度以及記憶體</p>
+
+    </div>
+
+    
+    
+    
+      
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/BLoC/" rel="tag"># BLoC</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/09/08/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Going-deeper-with-Image-Transformers-CaiT-%E5%BC%95%E5%85%A5-LayerScale-%E5%8F%8A-class-attention-layers-%E5%84%AA%E5%8C%96-DeiT/" rel="prev" title="Vision Transformer 演化史: Going deeper with Image Transformers - CaiT 引入 LayerScale 及 class-attention layers 優化 DeiT">
+      <i class="fa fa-chevron-left"></i> Vision Transformer 演化史: Going deeper with Image Transformers - CaiT 引入 LayerScale 及 class-attention layers 優化 DeiT
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/10/03/%E5%90%88%E6%AD%A1%E5%B1%B1%E4%B8%8A%E7%9C%8B%E6%98%9F%E6%98%9F-%E5%90%88%E6%AD%A1%E5%B1%B1%E4%B8%BB%E5%B3%B0%E5%8C%97%E5%B3%B0%E5%85%A9%E5%A4%A9%E4%B8%80%E5%A4%9C%E9%81%8A-%E4%B8%80/" rel="next" title="合歡山上看星星 - 合歡山主峰北峰兩天一夜遊 (一)">
+      合歡山上看星星 - 合歡山主峰北峰兩天一夜遊 (一) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%82%BA%E4%BB%80%E9%BA%BC-bloc-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-equatable-%E5%91%A2"><span class="nav-number">1.</span> <span class="nav-text">為什麼 BLoC 中要使用
+Equatable 呢？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#vs-equals-vs-hashcode"><span class="nav-number">1.1.</span> <span class="nav-text">&#x3D;&#x3D; vs equals vs hashcode</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#bloc-%E8%88%87-equatable"><span class="nav-number">1.2.</span> <span class="nav-text">BLoC 與 Equatable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">1.3.</span> <span class="nav-text">結論</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/09/23/%E7%82%BA%E4%BB%80%E9%BA%BC-BLoC-%E4%B8%AD%E8%A6%81%E4%BD%BF%E7%94%A8-Equatable-%E5%91%A2%EF%BC%9F/";
+    this.page.identifier = "2021/09/23/為什麼-BLoC-中要使用-Equatable-呢？/";
+    this.page.title = "為什麼 BLoC 中要使用 Equatable 呢？";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

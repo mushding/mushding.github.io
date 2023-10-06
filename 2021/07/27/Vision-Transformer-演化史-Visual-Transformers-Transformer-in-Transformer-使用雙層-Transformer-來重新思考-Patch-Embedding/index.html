@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="很多人會覺得 (包括我 XD) ViT 的方法實在太神奇了，直接把圖片表示在 16x16 的字串？！然後竟然還可以 work？這篇論文覺得直接把二維轉換成一維流失了太多空間上的資訊了，包括圖片像素與像素之間的關系，提出了 TNT Transformer in Transformer 架構，希望可以以內外兩層 Transformer 來加強圖片轉序列的可解釋性及可行性。 https:&#x2F;&#x2F;arxiv.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vision Transformer 演化史: Visual Transformers: Transformer in Transformer - 使用雙層 Transformer 來重新思考 Patch Embedding">
+<meta property="og:url" content="https://mushding.space/2021/07/27/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Transformer-in-Transformer-%E4%BD%BF%E7%94%A8%E9%9B%99%E5%B1%A4-Transformer-%E4%BE%86%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-Patch-Embedding/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="很多人會覺得 (包括我 XD) ViT 的方法實在太神奇了，直接把圖片表示在 16x16 的字串？！然後竟然還可以 work？這篇論文覺得直接把二維轉換成一維流失了太多空間上的資訊了，包括圖片像素與像素之間的關系，提出了 TNT Transformer in Transformer 架構，希望可以以內外兩層 Transformer 來加強圖片轉序列的可解釋性及可行性。 https:&#x2F;&#x2F;arxiv.">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/V102VCT.png">
+<meta property="og:image" content="https://i.imgur.com/YHc678K.png">
+<meta property="og:image" content="https://i.imgur.com/CWKy2QU.png">
+<meta property="og:image" content="https://i.imgur.com/OVAy35n.png">
+<meta property="og:image" content="https://i.imgur.com/ahN4tGk.png">
+<meta property="og:image" content="https://i.imgur.com/7wUmjOf.png">
+<meta property="og:image" content="https://i.imgur.com/OTUQ9cf.png">
+<meta property="og:image" content="https://i.imgur.com/h83UkUz.png">
+<meta property="og:image" content="https://i.imgur.com/KH3M8tZ.png">
+<meta property="og:image" content="https://i.imgur.com/SYveZi7.png">
+<meta property="article:published_time" content="2021-07-27T04:14:51.000Z">
+<meta property="article:modified_time" content="2021-07-27T07:45:05.240Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/V102VCT.png">
+
+<link rel="canonical" href="https://mushding.space/2021/07/27/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Transformer-in-Transformer-%E4%BD%BF%E7%94%A8%E9%9B%99%E5%B1%A4-Transformer-%E4%BE%86%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-Patch-Embedding/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Vision Transformer 演化史: Visual Transformers: Transformer in Transformer - 使用雙層 Transformer 來重新思考 Patch Embedding | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/07/27/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Transformer-in-Transformer-%E4%BD%BF%E7%94%A8%E9%9B%99%E5%B1%A4-Transformer-%E4%BE%86%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-Patch-Embedding/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Vision Transformer 演化史: Visual Transformers: Transformer in Transformer - 使用雙層 Transformer 來重新思考 Patch Embedding
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2021-07-27 12:14:51 / 修改時間：15:45:05" itemprop="dateCreated datePublished" datetime="2021-07-27T12:14:51+08:00">2021-07-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/07/27/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Transformer-in-Transformer-%E4%BD%BF%E7%94%A8%E9%9B%99%E5%B1%A4-Transformer-%E4%BE%86%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-Patch-Embedding/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/07/27/Vision-Transformer-演化史-Visual-Transformers-Transformer-in-Transformer-使用雙層-Transformer-來重新思考-Patch-Embedding/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.1k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>8 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>很多人會覺得 (包括我 XD) ViT 的方法實在太神奇了，直接把圖片表示在
+16x16 的字串？！然後竟然還可以
+work？這篇論文覺得直接把二維轉換成一維流失了太多空間上的資訊了，包括圖片像素與像素之間的關系，提出了
+TNT Transformer in Transformer 架構，希望可以以內外兩層 Transformer
+來加強圖片轉序列的可解釋性及可行性。</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2103.00112">https://arxiv.org/pdf/2103.00112</a></p>
+<p>keywords: TNT、Transformer in Transformer、word embedding</p>
+<span id="more"></span>
+<h2 id="introduction">1. Introduction</h2>
+<p>在之前的研究中包含 ViT、DeiT 都沒有去探討一個問題：patch embedding
+的可行性。倒底這種直接把圖片用 16x16 個區塊來表示，並且直接經過一個
+linear transform 的做法可行嗎？這種方法真的是最合適的方法嗎？</p>
+<p>作者認為 ViT、DeiT 等直覺 (intuitive)
+的做法會有一個大問題：<strong>會乎略掉每個 patch
+之間的訊息</strong>，也就是說在 16x16 之一的小區塊，經過了一個 linear
+的轉換後會破壞像素與像素之間的關聯性。</p>
+<p>因此作者提出了 TNT (Transformer iN Transformer)，<strong>試圖在 patch
+內再新增一個 Transformer 來取得 patch 內的訊息</strong>，保留外部的
+Transformer 的同時也新增一個內部的
+Transformer，利用內外不同視野的獲取資訊，來使網路有更好的效果。</p>
+<h2 id="approach">2. Approach</h2>
+<p>整體架構如下：</p>
+<p><img src="https://i.imgur.com/V102VCT.png" alt="Image" /></p>
+<h3 id="patch-embedding-pixel-embedding">Patch Embedding &amp; Pixel
+Embedding</h3>
+<p>首先依照 ViT、DeiT 的方法把一張 <span class="math inline">\(H\times
+W\times C\)</span> 的圖片分割成大小為 <span
+class="math inline">\(p\)</span> 數量為 <span
+class="math inline">\(n\)</span> 的 patch</p>
+<p><span class="math display">\[
+\mathcal{X} = [X^1,X^2,...,X^n] \in \mathbb{R}^{n\times p\times p\times
+c}
+\]</span></p>
+<p>接著把得到的 patch 再做一次一模一樣的操作得到更小的 patch，把 <span
+class="math inline">\(p\times p\times C\)</span> 的圖片分割成大小為
+<span class="math inline">\(p&#39;\)</span> 數量為 <span
+class="math inline">\(m\)</span> 的 patch</p>
+<p><span class="math display">\[
+\mathcal{Y_0} = [Y^1_0,Y^2_0,...,Y^n_0] \in \mathbb{R}^{n\times
+p&#39;\times p&#39;\times c}
+\]</span></p>
+<p><img src="https://i.imgur.com/YHc678K.png" alt="Image" /></p>
+<p>而比較大的 patch 稱為 <strong>Patch Embedding</strong> 比較小的 patch
+稱為 <strong>Pixel Embedding</strong></p>
+<p>接著各別不同大小的 Embedding 會經過不同的 Transformer</p>
+<p>Patch Embedding 經過 Outer Transformer，負責 patch 之間的全局
+(Global) 資訊 Pixel Embedding 經過 Inner Transformer，負責 pixel
+之間的局部 (Local) 資訊</p>
+<p><img src="https://i.imgur.com/CWKy2QU.png" alt="Image" /></p>
+<h3 id="outer-transformer-inner-transformer">Outer Transformer &amp;
+Inner Transformer</h3>
+<p>Inner Transformer 的公式，先做 MAT 再做 MLP，與 ViT 相同：</p>
+<p><span class="math display">\[
+\begin{gathered}
+  Y&#39;^i_l=Y^i_{l-1} + MSA(LN(Y^i_{l-1}))\\
+  Y^i_l=Y&#39;^i_{l-1} + MLP(LN(Y&#39;^i_{l}))
+\end{gathered}
+\]</span></p>
+<p>Outter Transformer 的公式，與上述差不多：</p>
+<p><span class="math display">\[
+\begin{gathered}
+  X&#39;^i_l=X^i_{l-1} + MSA(LN(X^i_{l-1}))\\
+  X^i_l=X&#39;^i_{l-1} + MLP(LN(X&#39;^i_{l}))
+\end{gathered}
+\]</span></p>
+<p>那兩個不同視野的 Transformer 要怎麼合併資訊呢？作者這邊是使用在進入
+Outter Transformer 前 會與 Inner Transformer 的結果 concat 起來。</p>
+<p>首先 Inner Transformer 的結果會先 flattern，接著經過一層 linear
+層把維度轉換成與 Outter Transformer 相同，再與 Outter Transformer
+相加，做為下一時間點的輸入。公式如下：</p>
+<p><span class="math display">\[
+Z^i_{l-1}=Z^i_{l-1}+Vec(Y^i_{l-1})W_{l-1}+b_{l-1}
+\]</span></p>
+<p>既：原 Outter Transformer 加上 flattern 後 乘上 <span
+class="math inline">\(W\)</span> 轉維度，再加上一個 b 權重值
+(這裡不知怎麼多出來的…)</p>
+<h3 id="positional-encoding">Positional Encoding</h3>
+<p>與 ViT 不同，TNT 使用的是 1D 的 Positional Encoding，公式如下：</p>
+<p><span class="math display">\[
+\mathcal{Z} \leftarrow \mathcal{Z} + E_{patch}
+\]</span></p>
+<p><span class="math display">\[
+E_{patch} \in \mathbb{R}^{(n+1)\times d}
+\]</span></p>
+<p>剛剛的 Patch Embedding &amp; Pixel Embedding
+在運算前都分別加上去。</p>
+<p>一樣 Patch Positional Encoding 負責全局空間的訊息 (global spatial
+information) 而 Pixel Positional Encoding 負責局部相對的訊息 (local
+relative information)</p>
+<h3 id="運算量分析">運算量分析</h3>
+<p>看起來 TNT 的運算量是 ViT 的兩部之多，因為整整多做一次
+Transformer，但其實不然，如果仔細去分析複雜度
+(論文有細詳推論過程這邊不多說)，會發現 Pixel Embedding
+的部分因為圖片太小而 (Pixel 的大小遠小於
+Patch)，因此複雜度並不會多很多，多一點點而已 (1.09倍)
+並沒有想像中的大。</p>
+<h3 id="網路架構">網路架構</h3>
+<p>設計了大小 (B-S) 模型，一律：patch size 設為 16×16，小 patch size
+設為 4×4</p>
+<p><img src="https://i.imgur.com/OVAy35n.png" alt="Image" /></p>
+<h2 id="experiment">3. Experiment</h2>
+<p>嗯…不錯呢，超越了 ViT 及 DeiT！</p>
+<p><img src="https://i.imgur.com/ahN4tGk.png" alt="Image" /></p>
+<h3 id="一定要-positional-encoding-嗎">一定要 Positional Encoding
+嗎？</h3>
+<p>作者有試著把兩個 Encoding 都拿掉看看效果有沒有影響，結論是在做
+attention 之前的 flattern 步驟，如果沒有位置的話，flattern
+後的結果不管怎麼排都沒差。因此實驗也證明加上 Encoding 效果比較好。</p>
+<p><img src="https://i.imgur.com/7wUmjOf.png" alt="Image" /></p>
+<h3 id="head-數量">head 數量</h3>
+<p>2 或 4 為最佳</p>
+<p><img src="https://i.imgur.com/OTUQ9cf.png" alt="Image" /></p>
+<h3 id="小-patch-size-的大小設定">小 patch size 的大小設定</h3>
+<p>大 patch size 是 16x16，那小的呢？ 實驗證明 4x4 為最佳</p>
+<p><img src="https://i.imgur.com/h83UkUz.png" alt="Image" /></p>
+<h3 id="可視化">可視化</h3>
+<p>Patch Embedding 可視化，兩個 Transformer
+的結果好處有特徵抓取的能力更強了，比 DeiT 相比，特徵分佈的更寬廣</p>
+<p><img src="https://i.imgur.com/KH3M8tZ.png" alt="Image" /></p>
+<p>Pixel Embedding 可視化，隨著網路越深越抽象</p>
+<p><img src="https://i.imgur.com/SYveZi7.png" alt="Image" /></p>
+<h2 id="結論">結論</h2>
+<p>如何把三維圖片表示成二維字串真的是一大難題，也是研究的熱門話題阿，而
+TNT 提出了雙重 Transformer
+的解法，雖然運算量大了一咪咪，但效果不錯，且有試著往解釋神奇的 16x16
+前進了一小步，相信未來一定有更好的做法來解釋 16x16。</p>
+<h2 id="reference">Reference</h2>
+<p>https://zhuanlan.zhihu.com/p/354913120</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/26/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Token-based-Image-Representation-and-Processing-for-Computer-Vision-%E4%BD%BF%E7%94%A8-visual-token-%E4%BE%86%E5%BC%B7%E5%8C%96%E5%82%B3%E7%B5%B1-CNN-%E7%9A%84%E7%B5%90%E6%9E%9C/" rel="prev" title="Vision Transformer 演化史: Visual Transformers: Token-based Image Representation and Processing for Computer Vision - 使用 visual token 來強化傳統 CNN 的結果">
+      <i class="fa fa-chevron-left"></i> Vision Transformer 演化史: Visual Transformers: Token-based Image Representation and Processing for Computer Vision - 使用 visual token 來強化傳統 CNN 的結果
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/28/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Conditional-Positional-Encodings-for-Vision-Transformers-%E5%8F%AF%E8%AE%8A%E5%BA%8F%E5%88%97%E9%95%B7%E7%9F%AD%E7%9A%84-Positional-Encoding/" rel="next" title="Vision Transformer 演化史: Conditional Positional Encodings for Vision Transformers - 可變序列長短的 Positional Encoding">
+      Vision Transformer 演化史: Conditional Positional Encodings for Vision Transformers - 可變序列長短的 Positional Encoding <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">1.</span> <span class="nav-text">1. Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#approach"><span class="nav-number">2.</span> <span class="nav-text">2. Approach</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#patch-embedding-pixel-embedding"><span class="nav-number">2.1.</span> <span class="nav-text">Patch Embedding &amp; Pixel
+Embedding</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#outer-transformer-inner-transformer"><span class="nav-number">2.2.</span> <span class="nav-text">Outer Transformer &amp;
+Inner Transformer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#positional-encoding"><span class="nav-number">2.3.</span> <span class="nav-text">Positional Encoding</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%81%8B%E7%AE%97%E9%87%8F%E5%88%86%E6%9E%90"><span class="nav-number">2.4.</span> <span class="nav-text">運算量分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">2.5.</span> <span class="nav-text">網路架構</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiment"><span class="nav-number">3.</span> <span class="nav-text">3. Experiment</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E5%AE%9A%E8%A6%81-positional-encoding-%E5%97%8E"><span class="nav-number">3.1.</span> <span class="nav-text">一定要 Positional Encoding
+嗎？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#head-%E6%95%B8%E9%87%8F"><span class="nav-number">3.2.</span> <span class="nav-text">head 數量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F-patch-size-%E7%9A%84%E5%A4%A7%E5%B0%8F%E8%A8%AD%E5%AE%9A"><span class="nav-number">3.3.</span> <span class="nav-text">小 patch size 的大小設定</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AF%E8%A6%96%E5%8C%96"><span class="nav-number">3.4.</span> <span class="nav-text">可視化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">4.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/07/27/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Visual-Transformers-Transformer-in-Transformer-%E4%BD%BF%E7%94%A8%E9%9B%99%E5%B1%A4-Transformer-%E4%BE%86%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-Patch-Embedding/";
+    this.page.identifier = "2021/07/27/Vision-Transformer-演化史-Visual-Transformers-Transformer-in-Transformer-使用雙層-Transformer-來重新思考-Patch-Embedding/";
+    this.page.title = "Vision Transformer 演化史: Visual Transformers: Transformer in Transformer - 使用雙層 Transformer 來重新思考 Patch Embedding";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="本篇論文雖然目的是在做 Re-ID 任務，但是「手勢辨識」「影片中的行人辨識」，這類任務與我現在的題目都有相似之處：輸入資料並非單純的二維影像。要怎麼利用多一個「時間、空間」維來完成任務，是這些題目所要解決的重點 https:&#x2F;&#x2F;arxiv.org&#x2F;abs&#x2F;1811.04129 keywords: Re-ID、Spatial-Temporal Attention (STA)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力">
+<meta property="og:url" content="https://mushding.space/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="本篇論文雖然目的是在做 Re-ID 任務，但是「手勢辨識」「影片中的行人辨識」，這類任務與我現在的題目都有相似之處：輸入資料並非單純的二維影像。要怎麼利用多一個「時間、空間」維來完成任務，是這些題目所要解決的重點 https:&#x2F;&#x2F;arxiv.org&#x2F;abs&#x2F;1811.04129 keywords: Re-ID、Spatial-Temporal Attention (STA)">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/lKF4lp7.png">
+<meta property="og:image" content="https://i.imgur.com/vNdPVZs.png">
+<meta property="og:image" content="https://i.imgur.com/EqYKmMG.png">
+<meta property="og:image" content="https://i.imgur.com/UtHPsk4.png">
+<meta property="og:image" content="https://i.imgur.com/3LWUCn7.png">
+<meta property="article:published_time" content="2022-07-18T04:05:43.000Z">
+<meta property="article:modified_time" content="2022-07-18T05:50:19.075Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="3D image">
+<meta property="article:tag" content="Attention">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/lKF4lp7.png">
+
+<link rel="canonical" href="https://mushding.space/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2022-07-18 12:05:43 / 修改時間：13:50:19" itemprop="dateCreated datePublished" datetime="2022-07-18T12:05:43+08:00">2022-07-18</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-影片空間時間注意力/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>2.4k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>6 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本篇論文雖然目的是在做 Re-ID
+任務，但是「手勢辨識」「影片中的行人辨識」，這類任務與我現在的題目都有相似之處：輸入資料並非單純的二維影像。要怎麼利用多一個「時間、空間」維來完成任務，是這些題目所要解決的重點</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/abs/1811.04129">https://arxiv.org/abs/1811.04129</a></p>
+<p>keywords: Re-ID、Spatial-Temporal Attention (STA) <span id="more"></span></p>
+<p>Person re-identification (Re-ID)
+行人辨識，所要解決的任務是在一個影片做行人偵測，這個任務最困難的地方在輸入不是一張影像，而是由許多幀數構成的影片。</p>
+<p>這種帶有時間維度的資料，在處理上有幾個困難的點：</p>
+<ol type="1">
+<li>最直接的做法是把影片每一幀當成影像放進網路訊練，最後用一個
+maxpooling 統整所有結果。缺點是遇到 occlusions 遮擋時效果會很不好</li>
+<li>maxpooling
+還有一個缺點是，會破壞影片時間軸的資訊，之後有任務在模型中加入 attention
+區別各個幀的重要性，但是本篇作者認為，現有的 attention
+方法都沒辨很好的做到：找到最重要的那一幀，以及大部份 attention
+因全連接層的關系輸入長度是要固定的。</li>
+</ol>
+<p>作者基於上面兩個理由提出 <strong>Spatial-Temporal Attention
+(STA)</strong> 空間-時間注意力機制</p>
+<p><img src="https://i.imgur.com/lKF4lp7.png"
+alt="image-20220717151834910" /></p>
+<h2 id="網路架構">網路架構</h2>
+<h3 id="backbone">Backbone</h3>
+<p>作者使用 ResNet-50 作為網路主幹，小小修改的地方在把最後一層的 average
+pooling 及全連接層去掉，改接入到作者自己設計的 STA 中</p>
+<h3 id="spatial-temporal-attention-model">Spatial-Temporal Attention
+Model</h3>
+<p>作者認為：現有的 Attention 機制有以下三個問題</p>
+<ol type="1">
+<li>因經過更多的 Conv 層，代表著更多的計算</li>
+<li>不同空間中的 attention
+彼此是互相獨立的，這會使得前景的目標行人網路關注的地方並非完整的人，而是零散的區域</li>
+<li>空間、時間注意力也是彼此獨立的，權重不共享</li>
+</ol>
+<p>因此設計出 Spatial-Temporal Attention (STA) 架構，流程如下：</p>
+<p>首先一影片 <span class="math inline">\(V\)</span> 由許多幀 <span
+class="math inline">\(I\)</span> 構成，<span
+class="math inline">\(V={I_1,...,I_N}\)</span>，會先在其中隨機取 n
+個幀做運算得出輸入 <span class="math inline">\(f_n\)</span> ，對 <span
+class="math inline">\(f_n\)</span> 做 <span
+class="math inline">\(l_2\)</span>
+正規化，再用平方和來除以它。作者利用平方和的 <span
+class="math inline">\(l_2\)</span> 對選出的 n 個幀做空間注意力。 <span
+class="math display">\[
+g_n(h,w)=\frac{||\sum^{d=D}_{d=1}f_n(h,w,d)^2||_\mathbb{2}}{\sum^{H,W}_{h,w}||\sum^{d=D}_{d=1}f_n(h,w,d)^2||_\mathbb{2}}
+\]</span> 對每個幀做完 <span class="math inline">\(l_2\)</span>
+後，再將每個幀水平的切成 <span class="math inline">\(K\)</span>
+個相同大小的塊 <span class="math display">\[
+\begin{aligned}
+g_n = [g_{n,1},...,g_{n,K}]\\
+f_n = [f_{n,1},...,f_{n,K}]
+\end{aligned}
+\]</span> 接著對「每一塊」都做一次 <span
+class="math inline">\(l_1\)</span>
+正規化，作者說這樣可以達到區塊中的空間注意力 <span
+class="math display">\[
+s_{n,k}=\sum_{i,j}||g_{n,k}(i,j)||_\mathbb{1}
+\]</span> 計算完一幀內的「全局」「局部」空間注意力後，再合併剛剛的 n
+幀，對所有 n 個空間注意力結果再做 <span
+class="math inline">\(l_1\)</span> 而非複雜的 Conv
+層，作者說得到的結果可看成時間注意力分數 <span class="math display">\[
+S(n,k)=\frac{s_{n,k}}{\sum_n||s_{n,k}||_\mathbb{1}}
+\]</span> 最後我們就可以得到一個二維 <span class="math inline">\(n\times
+k\)</span> 的注意力矩陣，n -&gt; 幀數、k -&gt; 塊數</p>
+<p><img src="https://i.imgur.com/vNdPVZs.png"
+alt="image-20220718001928912" /></p>
+<h3 id="inter-frame-regularization">Inter-Frame Regularization</h3>
+<p>作者為了避免網路過度依賴單一區塊的權重，設計了 Inter-Frame
+Regularization 來正規化彼此差異</p>
+<p>作者會在做完第一次 <span class="math inline">\(l_2\)</span>
+得到幀的空間注意力後，隨機選出兩個幀，彼此做 Frobenius
+Norm，公式如下：(我個人覺得就是 pixel-wise 的像素平方差而已…) <span
+class="math display">\[
+\begin{align}
+Reg&amp;=||g_i=g_j||_F\\
+&amp;=\sqrt{\sum^H_{h=1}\sum^W_{w=1}|g_i(h,w)-g_j(h,w)|^2}
+\end{align}
+\]</span> 為了不要兩幀差異太大，所以這個 Reg 值越小越好，作者並且加到
+Loss 裡面變成：(<span class="math inline">\(\lambda\)</span>
+為控制比例超參數) <span class="math display">\[
+\min(\mathcal{L}_{total}+\lambda Reg)
+\]</span></p>
+<h3 id="feature-fusion-合併方法">Feature Fusion 合併方法</h3>
+<p>做完上述 Attention 的得到一個 <span class="math inline">\(n\times
+k\)</span> 的 <span class="math inline">\(s_{n,k}\)</span>
+分數(注意力)矩陣，先會把特徵圖也分為 K 塊，接著做兩種不同的合併方法</p>
+<ol type="1">
+<li>對所有幀中的塊，直接選擇分數最高的那一塊。例如 n=4 ，我們要在 k
+中選一個最大的值為結果，一共會選 4 次，稱為 Pick max index</li>
+<li>對每一個幀、每一個塊做 element-wise
+的乘法，把分數加權在特徵圖中，稱為 Weighted sum</li>
+<li>最後把 Pick max index 、 Weighted sum 兩矩陣 concat 起來</li>
+</ol>
+<p>最後就是一連串的：GAP -&gt; FC -&gt; FC -&gt; 分類…</p>
+<h3 id="loss">Loss</h3>
+<p>作者使用 triplet loss + softmax 的混合 loss</p>
+<p>triplet loss 更詳細的介紹可以參考下面網站：<a
+target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/171627918">triplet loss
+损失函数</a></p>
+<h2 id="實驗結果">實驗結果</h2>
+<p>作者有做了一些 Ablation
+實驗來證實他們的方法是有用的，先來看修改效果圖</p>
+<p><img src="https://i.imgur.com/EqYKmMG.png"
+alt="image-20220718005006372" /></p>
+<p>對於隨機在影片中選 N 幀的實驗</p>
+<p><img src="https://i.imgur.com/UtHPsk4.png"
+alt="image-20220718005041227" /></p>
+<p>對於一幀中切 K 個塊的實驗，作者發現切太多塊反而不好</p>
+<p><img src="https://i.imgur.com/3LWUCn7.png"
+alt="image-20220718005050352" /></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/07/18/Global-Local-Temporal-Representations-For-Video-Person-Re-Identification-融合-Dilated-與-Self-Attention-的空間時間注意力/" rel="bookmark">Global-Local Temporal Representations For Video Person Re-Identification - 融合 Dilated 與 Self-Attention 的空間時間注意力</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/07/07/UNETR-Transformers-for-3D-Medical-Image-Segmentation-把-Transformer-與-U-Net-結合/" rel="bookmark">UNETR: Transformers for 3D Medical Image Segmentation: 把 Transformer 與 U-Net 結合</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/07/07/深度學習-3D-影像速讀/" rel="bookmark">深度學習 3D 影像速讀</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/3D-image/" rel="tag"># 3D image</a>
+              <a href="/tags/Attention/" rel="tag"># Attention</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/" rel="prev" title="使用 vscode 遠端 docker 開發使用教學">
+      <i class="fa fa-chevron-left"></i> 使用 vscode 遠端 docker 開發使用教學
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/07/18/Global-Local-Temporal-Representations-For-Video-Person-Re-Identification-%E8%9E%8D%E5%90%88-Dilated-%E8%88%87-Self-Attention-%E7%9A%84%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/" rel="next" title="Global-Local Temporal Representations For Video Person Re-Identification - 融合 Dilated 與 Self-Attention 的空間時間注意力">
+      Global-Local Temporal Representations For Video Person Re-Identification - 融合 Dilated 與 Self-Attention 的空間時間注意力 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">1.</span> <span class="nav-text">網路架構</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#backbone"><span class="nav-number">1.1.</span> <span class="nav-text">Backbone</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#spatial-temporal-attention-model"><span class="nav-number">1.2.</span> <span class="nav-text">Spatial-Temporal Attention
+Model</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#inter-frame-regularization"><span class="nav-number">1.3.</span> <span class="nav-text">Inter-Frame Regularization</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#feature-fusion-%E5%90%88%E4%BD%B5%E6%96%B9%E6%B3%95"><span class="nav-number">1.4.</span> <span class="nav-text">Feature Fusion 合併方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#loss"><span class="nav-number">1.5.</span> <span class="nav-text">Loss</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%A6%E9%A9%97%E7%B5%90%E6%9E%9C"><span class="nav-number">2.</span> <span class="nav-text">實驗結果</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/";
+    this.page.identifier = "2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-影片空間時間注意力/";
+    this.page.title = "STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="2021 年 1 月 Google 提出了 BoTNet 架構，其最核心的思想就是替換 ResNet 中的 Bottleneck，把最後幾層的卷積層 (Conv) 替換為 Multi-Head Self-Attention (MHA)。實驗證實在僅僅只修改幾層網路下，BoTNet 在實例分割任務上取得了 44.4% 的 Mask AP 與 49.7%的 Box AP，與純 ResNet 相比，在分">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vision Transformer 演化史: Bottleneck Transformers for Visual Recognition - BoT 把 Bottleneck 加上 Transformer">
+<meta property="og:url" content="https://mushding.space/2021/09/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Bottleneck-Transformers-for-Visual-Recognition-BoT-%E6%8A%8A-Bottleneck-%E5%8A%A0%E4%B8%8A-Transformer/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="2021 年 1 月 Google 提出了 BoTNet 架構，其最核心的思想就是替換 ResNet 中的 Bottleneck，把最後幾層的卷積層 (Conv) 替換為 Multi-Head Self-Attention (MHA)。實驗證實在僅僅只修改幾層網路下，BoTNet 在實例分割任務上取得了 44.4% 的 Mask AP 與 49.7%的 Box AP，與純 ResNet 相比，在分">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/KUAnnj9.png">
+<meta property="og:image" content="https://i.imgur.com/erOrnzF.png">
+<meta property="og:image" content="https://i.imgur.com/zfvcaNS.png">
+<meta property="og:image" content="https://i.imgur.com/Nu1aVpt.png">
+<meta property="og:image" content="https://i.imgur.com/Wx1Bw0o.png">
+<meta property="og:image" content="https://i.imgur.com/n7JbimZ.png">
+<meta property="og:image" content="https://i.imgur.com/Wj9yHNC.png">
+<meta property="og:image" content="https://i.imgur.com/lcC7ebU.png">
+<meta property="article:published_time" content="2021-09-02T07:59:50.000Z">
+<meta property="article:modified_time" content="2021-09-02T17:17:07.130Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/KUAnnj9.png">
+
+<link rel="canonical" href="https://mushding.space/2021/09/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Bottleneck-Transformers-for-Visual-Recognition-BoT-%E6%8A%8A-Bottleneck-%E5%8A%A0%E4%B8%8A-Transformer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Vision Transformer 演化史: Bottleneck Transformers for Visual Recognition - BoT 把 Bottleneck 加上 Transformer | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/09/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Bottleneck-Transformers-for-Visual-Recognition-BoT-%E6%8A%8A-Bottleneck-%E5%8A%A0%E4%B8%8A-Transformer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Vision Transformer 演化史: Bottleneck Transformers for Visual Recognition - BoT 把 Bottleneck 加上 Transformer
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-09-02 15:59:50" itemprop="dateCreated datePublished" datetime="2021-09-02T15:59:50+08:00">2021-09-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2021-09-03 01:17:07" itemprop="dateModified" datetime="2021-09-03T01:17:07+08:00">2021-09-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/09/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Bottleneck-Transformers-for-Visual-Recognition-BoT-%E6%8A%8A-Bottleneck-%E5%8A%A0%E4%B8%8A-Transformer/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/09/02/Vision-Transformer-演化史-Bottleneck-Transformers-for-Visual-Recognition-BoT-把-Bottleneck-加上-Transformer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>2k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>5 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>2021 年 1 月 Google 提出了 BoTNet 架構，其最核心的思想就是替換 ResNet
+中的 Bottleneck，把最後幾層的卷積層 (Conv) 替換為 Multi-Head
+Self-Attention (MHA)。實驗證實在僅僅只修改幾層網路下，BoTNet
+在實例分割任務上取得了 44.4% 的 Mask AP 與 49.7%的 Box AP，與純 ResNet
+相比，<strong>在分類、分割任務上皆有效能上的提升，同時還可以降低參數量</strong>。</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2101.11605.pdf">https://arxiv.org/pdf/2101.11605.pdf</a></p>
+<p>keywords: BoT、Bottleneck <span id="more"></span></p>
+<h2 id="introduction">1. Introduction</h2>
+<p>本篇論文主要是在討論實例分割的改進，因而作者以「應用 Transformer
+在實例分割上」，以及像 ViT 一樣使用純 Transformer
+為出發點下，提出了兩大的問題：</p>
+<ol type="1">
+<li>通常分割的圖片 (1024x1024) 相較於分類的圖片 (224x224)
+大小還有來得大。</li>
+<li>在圖片大的情況下，attention 的計算量會呈現指數的上升 (<a
+href="https://mushding.space/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/">可參考以前的文章</a>)</li>
+</ol>
+<p>為了解決以上的問題作者提出了改進方法：</p>
+<ol type="1">
+<li>先使用普通的卷積運算的強項，從大解析度的圖中截取低階特徵</li>
+<li>在最後一層卷積，圖片被 downsampling 成小解析度後，再做 Transformer
+運算</li>
+</ol>
+<p>因此作者直接引用了非常成熟的 ResNet-50
+來滿足低階特徵截取的部分，並將其最後幾層改為 Transformer。由於 ResNet-50
+使用了 Bottleneck，於是作者將這個 ResNet 與 Transformer 結合的網路稱為
+Bottleneck Transformer，簡寫為 BoT。</p>
+<p>BoT 的特色為網路架構非常單純的僅僅把 bottleneck 中的卷積層替換成
+Self-Attention 層。如下圖所示：</p>
+<p><img src="https://i.imgur.com/KUAnnj9.png" alt="Image" /></p>
+<p>而我個人認為，BoT 雖然在創新上占比不多 (而且也只是加個 Self-Attention
+就說自己是 Transformer…)，但是嘗試著把 Transformer 與 CNN
+結合，以及最後的實驗證明結果，都可以當成研究 Transformer 與 CNN
+互利共生的好的出發點。</p>
+<h2 id="網路架構">2. 網路架構</h2>
+<p>前面也提到了，作者直接把 ResNet-50 拿來用，所以 BoT
+在網路架構上並不複雜。下圖左邊為傳統的 Transformer
+Block，而中間則是作者提出的 BoT Block。作者將其視為與 Transformer Block
+同階級的模組</p>
+<p><img src="https://i.imgur.com/erOrnzF.png" alt="Image" /></p>
+<p>而其中的 MHSA 為 Multi-Head Self-Attention 的簡寫 (也可寫為
+MSA)，其詳細架構如下圖：</p>
+<p>可看到 BoT 是有做 positional encoding 的，作者提到這邊作的是 Relative
+Position Encodings，而且是與 Query 做矩陣乘法而非加法</p>
+<p><img src="https://i.imgur.com/zfvcaNS.png" alt="Image" /></p>
+<p>而這樣子的 MHA 架構，只會套用在 ResNet-50 的最後一層 (c5
+層)，其餘架構<strong>全部</strong>與 ResNet-50
+一致。這是為了達成減少運算量這個需求。</p>
+<p><img src="https://i.imgur.com/Nu1aVpt.png" alt="Image" /></p>
+<h2 id="experiment">3. Experiment</h2>
+<p>作者在實驗上沒有特別與其它網路或者是 sota 互相比較，而是單純比較 R50
+與 BoT50 之間的差別。</p>
+<h3 id="在實例分割上的比較">在實例分割上的比較</h3>
+<p>資料集選用 COCO，可看到在不同 epochs 下 BoT50 皆比 R50 優秀</p>
+<p><img src="https://i.imgur.com/Wx1Bw0o.png" alt="Image" /></p>
+<h3 id="位置編碼的比較">位置編碼的比較</h3>
+<p>單 attention 增加 0.6，而加上「相對位置」後的效果明顯好了一些</p>
+<p><img src="https://i.imgur.com/n7JbimZ.png" alt="Image" /></p>
+<h2 id="botnet-s1">4. BoTNet-S1</h2>
+<p>在論文的最後，作者把 BoTNet 改成分類任務，並改稱作為 BoTNet-S1。</p>
+<p>作者發現如果單純的把 BoTNet 直接放進 ImageNet 分類的話，效果與
+ResNet50 不相上下，但是如果參考 ViT，只把圖片 downsample 到 1/16 的大小
+(換算成 ResNet 為第四個階段 (c4))，而非 ResNet 的1/32
+的話效果會變好。</p>
+<p>於是作者把 BoT 的最後一層 (c5) 的 stride 2 給取消，稱為 S1 (少一個
+stride 的意思…？)，網路稱為 BoTNet-S1</p>
+<p>實驗比較結果：</p>
+<p><img src="https://i.imgur.com/Wj9yHNC.png" alt="Image" /></p>
+<p>BoTNet-S1 與其它 sota 比較</p>
+<p><img src="https://i.imgur.com/lcC7ebU.png" alt="Image" /></p>
+<h2 id="結論">結論</h2>
+<p>本篇論文架構簡單，改進的地方並不多，許多實驗也並未與 sota 比較。</p>
+<p>但是如果換個角度來看：只把 ResNet 最後一層改成 attention
+效果就可以好上 1%
+這點來說，還是挺有意思的，以最低的更改成本就可以達到效果好且參數少。</p>
+<p>且這篇論文也在 CNN 與 Transformer
+的結合，不管是效能還是運算量，都給出了一些見解，使這兩個網路往各取所長之路前進。</p>
+<h2 id="reference">Reference</h2>
+<p>https://zhuanlan.zhihu.com/p/347602463</p>
+<p>https://bbs.cvmart.net/articles/4142</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/08/29/%E5%9F%BA%E9%9A%86%E5%B6%BC%E4%B8%89%E5%90%88%E4%B8%80-%E9%BE%8D%E6%B4%9E%E4%B8%80%E6%97%A5%E9%81%8A/" rel="prev" title="基隆嶼三合一 & 龍洞一日遊">
+      <i class="fa fa-chevron-left"></i> 基隆嶼三合一 & 龍洞一日遊
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/09/07/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-DeepViT-Towards-Deeper-Vision-Transformer-%E8%A9%A6%E8%91%97%E6%8A%8A-Transformer-%E8%AE%8A%E6%B7%B1/" rel="next" title="Vision Transformer 演化史: DeepViT: Towards Deeper Vision Transformer - 試著把 Transformer 變深">
+      Vision Transformer 演化史: DeepViT: Towards Deeper Vision Transformer - 試著把 Transformer 變深 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">1.</span> <span class="nav-text">1. Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number">2.</span> <span class="nav-text">2. 網路架構</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiment"><span class="nav-number">3.</span> <span class="nav-text">3. Experiment</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E5%AF%A6%E4%BE%8B%E5%88%86%E5%89%B2%E4%B8%8A%E7%9A%84%E6%AF%94%E8%BC%83"><span class="nav-number">3.1.</span> <span class="nav-text">在實例分割上的比較</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%8D%E7%BD%AE%E7%B7%A8%E7%A2%BC%E7%9A%84%E6%AF%94%E8%BC%83"><span class="nav-number">3.2.</span> <span class="nav-text">位置編碼的比較</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#botnet-s1"><span class="nav-number">4.</span> <span class="nav-text">4. BoTNet-S1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number">5.</span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/09/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-Bottleneck-Transformers-for-Visual-Recognition-BoT-%E6%8A%8A-Bottleneck-%E5%8A%A0%E4%B8%8A-Transformer/";
+    this.page.identifier = "2021/09/02/Vision-Transformer-演化史-Bottleneck-Transformers-for-Visual-Recognition-BoT-把-Bottleneck-加上-Transformer/";
+    this.page.title = "Vision Transformer 演化史: Bottleneck Transformers for Visual Recognition - BoT 把 Bottleneck 加上 Transformer";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

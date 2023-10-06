@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="這幾天在刷題寫 leetcode，用最方便的 python 語言來刷，在寫到 39. Combination Sum 這題的時候，為了要滿足遞迴的條件，所以在遞迴函式中加入當前答案 res&#x3D;list() 當做參數，結果發現…這個 List 面試的數值怎麼一直變來變去啦…明明我沒有去動到它的阿… keywords: Pass by Assignment">
+<meta property="og:type" content="article">
+<meta property="og:title" content="什麼是 python Pass by Assignment？">
+<meta property="og:url" content="https://mushding.space/2022/12/27/%E4%BB%80%E9%BA%BC%E6%98%AF-python-Pass-by-Assignment%EF%BC%9F/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="這幾天在刷題寫 leetcode，用最方便的 python 語言來刷，在寫到 39. Combination Sum 這題的時候，為了要滿足遞迴的條件，所以在遞迴函式中加入當前答案 res&#x3D;list() 當做參數，結果發現…這個 List 面試的數值怎麼一直變來變去啦…明明我沒有去動到它的阿… keywords: Pass by Assignment">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/UPYZbbs.png">
+<meta property="og:image" content="https://i.imgur.com/Mu0Wonv.png">
+<meta property="og:image" content="https://i.imgur.com/HMMzAbJ.png">
+<meta property="og:image" content="https://i.imgur.com/oL5rrrg.png">
+<meta property="og:image" content="https://i.imgur.com/gFS3AVQ.png">
+<meta property="og:image" content="https://i.imgur.com/nQ3pNSh.png">
+<meta property="article:published_time" content="2022-12-27T04:06:11.000Z">
+<meta property="article:modified_time" content="2023-08-24T07:21:35.855Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="python">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/UPYZbbs.png">
+
+<link rel="canonical" href="https://mushding.space/2022/12/27/%E4%BB%80%E9%BA%BC%E6%98%AF-python-Pass-by-Assignment%EF%BC%9F/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>什麼是 python Pass by Assignment？ | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/12/27/%E4%BB%80%E9%BA%BC%E6%98%AF-python-Pass-by-Assignment%EF%BC%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          什麼是 python Pass by Assignment？
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2022-12-27 12:06:11" itemprop="dateCreated datePublished" datetime="2022-12-27T12:06:11+08:00">2022-12-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2023-08-24 15:21:35" itemprop="dateModified" datetime="2023-08-24T15:21:35+08:00">2023-08-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%9C%E9%96%8B%E7%99%BC%E5%BF%83%E5%BE%97/" itemprop="url" rel="index"><span itemprop="name">雜開發心得</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/12/27/%E4%BB%80%E9%BA%BC%E6%98%AF-python-Pass-by-Assignment%EF%BC%9F/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/12/27/什麼是-python-Pass-by-Assignment？/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>5.9k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>15 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>這幾天在刷題寫 leetcode，用最方便的 python 語言來刷，在寫到 <a
+target="_blank" rel="noopener" href="https://leetcode.com/problems/combination-sum/">39. Combination
+Sum</a> 這題的時候，為了要滿足遞迴的條件，所以在遞迴函式中加入當前答案
+<code>res=list()</code> 當做參數，結果發現…這個 List
+面試的數值怎麼一直變來變去啦…明明我沒有去動到它的阿…</p>
+<p>keywords: Pass by Assignment <span id="more"></span></p>
+<p>以下是犯人 code：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> <span class="type">List</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self</span>):</span></span><br><span class="line">        self.ans = <span class="built_in">list</span>()</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">combinationSum</span>(<span class="params">self, candidates: <span class="type">List</span>[<span class="built_in">int</span>], target: <span class="built_in">int</span></span>) -&gt; <span class="type">List</span>[<span class="type">List</span>[<span class="built_in">int</span>]]:</span></span><br><span class="line">        </span><br><span class="line">        res = <span class="built_in">list</span>()</span><br><span class="line">        res.append(candidates[<span class="number">0</span>])</span><br><span class="line">        self.findSum(res, candidates, target)</span><br><span class="line"></span><br><span class="line">        candidates = candidates[<span class="number">1</span>:]</span><br><span class="line">        res.pop()</span><br><span class="line">        res.append(candidates[<span class="number">0</span>])</span><br><span class="line">        self.findSum(res, candidates, target)</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> self.ans</span><br><span class="line">        </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">findSum</span>(<span class="params">self, res, candidates, target</span>):</span></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> candidates:</span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">sum</span>(res) == target:</span><br><span class="line">            self.ans.append(res)</span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">sum</span>(res) &gt; target:</span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line"></span><br><span class="line">        res.append(candidates[<span class="number">0</span>])</span><br><span class="line">        self.findSum(res, candidates, target)</span><br><span class="line"></span><br><span class="line">        candidates = candidates[<span class="number">1</span>:]</span><br><span class="line">        res.pop()</span><br><span class="line">        res.append(candidates[<span class="number">0</span>])</span><br><span class="line">        self.findSum(res, candidates, target)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+<p>發生事情當下我心想：該不會是發生了 call by reference
+吧…，所以特別花了一點時間來研究一下，python 中傳值的方式倒底是怎麼傳</p>
+<h3 id="call-by-value-vs-call-by-reference">Call by Value vs Call by
+Reference</h3>
+<p>在開始講 python 是怎麼傳值前，我們要先來了解在 python
+中是如何定義資料型態的，以下的例子我會舉 JS 當成是另一個語言來做比較</p>
+<p>在 JS (以及一部份語言) 中所有的資料型態分為兩種：primitive type 以及
+object type</p>
+<p>所謂的 primitive type (中文翻原始型別)，在 JS 中有以下類別：</p>
+<ul>
+<li>String</li>
+<li>Number (int, float, ...)</li>
+<li>Boolean</li>
+<li>Null</li>
+<li>Undefined</li>
+</ul>
+<p>而大部份你看得到的「其它」類別，都是 object type，也就是都是由一個
+object 定義出來的</p>
+<ul>
+<li>Object</li>
+<li>Function</li>
+<li>Array</li>
+<li>Set</li>
+</ul>
+<p>而在 JS 中：primitive type 全部都是 call by
+value，也就是傳進函式前，complier
+會先幫你在記憶體中新增一塊不同位置，但是值相同</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">call_by_value</span>(<span class="params">x</span>) </span>&#123;</span><br><span class="line">  <span class="built_in">console</span>.log(x);    <span class="comment">// 5 </span></span><br><span class="line">  x = <span class="number">1</span>;</span><br><span class="line">  <span class="built_in">console</span>.log(x);    <span class="comment">// 1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">let</span> x = <span class="number">5</span>;</span><br><span class="line"><span class="built_in">console</span>.log(x);      <span class="comment">// 5 (進入函數前)</span></span><br><span class="line">call_by_value(x);</span><br><span class="line"><span class="built_in">console</span>.log(x);      <span class="comment">// 5 (雖然進入函數後 x 有更動到，但因在 function 內是其它記憶體，所以外部值沒變)</span></span><br></pre></td></tr></table></figure>
+<p>其它的 Object type 則是 call by
+reference，也就是不管是在函式內外，變數指向的記憶體位置都是一樣的，所以在
+call_by_reference() 函式內的改動，會影響到函式外的變數：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> person = &#123;</span><br><span class="line">  <span class="attr">name</span>: <span class="string">&#x27;John&#x27;</span>,</span><br><span class="line">  <span class="attr">age</span>: <span class="number">25</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">call_by_reference</span>(<span class="params">obj</span>) </span>&#123;</span><br><span class="line">  obj.age += <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(preson);    <span class="comment">// &#123; name: &#x27;John&#x27;, age: 25 &#125;</span></span><br><span class="line">increaseAge(person);</span><br><span class="line"><span class="built_in">console</span>.log(person);    <span class="comment">// &#123; name: &#x27;John&#x27;, age: 26 &#125;</span></span><br></pre></td></tr></table></figure>
+<h3 id="mutable-vs-immutable">Mutable vs Immutable</h3>
+<p>而在 python 中比較不一樣的是，python 中所有的型別都是一個物件
+(object)，每一個資料都會有一個 __class__ 屬性來看看是由哪一個 class
+所生成的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">x = <span class="number">100</span></span><br><span class="line"><span class="built_in">print</span>(x.__class__)   <span class="comment"># &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">type</span>(x))       <span class="comment"># &lt;class &#x27;int&#x27;&gt;     // 與上面的程式等價</span></span><br></pre></td></tr></table></figure>
+<p>同時也可以使用 id 來看看這個變數是放在記憶中哪一個位置</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(x))         <span class="comment"># 4342041840</span></span><br></pre></td></tr></table></figure>
+<p>因為每一個型別都是一個物件，所以不會像其它語言的分法一樣，在 python
+中是透過是不是 mutable 來區分的。根據網路上別人留言的定義 mutable
+的意思是</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// a mutable object is an object that can be changed</span><br><span class="line">// while an immutable object can&#x27;t be changed</span><br></pre></td></tr></table></figure>
+<p>下表是 python 中常見型別是不是 mutable/immutable 的表格。<a
+target="_blank" rel="noopener" href="https://medium.com/@meghamohan/mutable-and-immutable-side-of-python-c2145cf72747">圖片參考自
+Mutable vs Immutable Objects in Python</a></p>
+<p><img src="https://i.imgur.com/UPYZbbs.png" alt="image-20221206110751263" style="zoom:50%;" /></p>
+<p>接下來詳細介紹這兩個的差別：</p>
+<p>immutable 物件一旦被創造出來，它的值就永遠不可以再更改，像是
+int、float、string、bool、<strong>tuple</strong>。用下面簡單的例子來舉例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">x = <span class="number">100</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(x))    <span class="comment"># 4334161232</span></span><br><span class="line"></span><br><span class="line">x = <span class="number">200</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(x))    <span class="comment"># 4334161264</span></span><br></pre></td></tr></table></figure>
+<p>可以發現因為 x 是 int 型別，是屬於 immutable，一旦值發生改變 python
+是直接會再找一塊新的記憶體來存 x 變數，而非修改原本記憶體的值</p>
+<p>不知道大家看到這邊的時候有沒有覺得很奇怪，為什麼 python
+要這麼沒有效率的一直新增記憶體空間阿？我們不訪試著想想看，如果今天是在 C
+中我們重複定義了一個變數會發生什麼事：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">100</span>;</span><br><span class="line"><span class="keyword">int</span> x = <span class="number">200</span>;    <span class="comment">// error: redefinition of ‘x’</span></span><br></pre></td></tr></table></figure>
+<p>它會噴重複定義的錯，因為 x
+所在的記憶體位置已經被使用了，當我們想再定義一次時，complier
+會提醒我們不能這麼做。但是有沒有想過，為什麼 python 可以這麼做呢？python
+雖然少了型別 (int) 的部份，但還是可以達成下面程式。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = <span class="number">100</span></span><br><span class="line">x = <span class="number">200</span></span><br></pre></td></tr></table></figure>
+<p>其實我們之所以可以在 python 裡面執行這種操作，就是因為每當使用
+<code>=</code> 去 assign 一個變數時，python
+都會在記憶體中新增一塊位置存放它，也就是說其實這兩個 x
+根本是不一樣的東西，而這也是 immutable 的精神所在：值絕對不會被更改</p>
+<p>如果用圖片的方式來表達的話，python 中的執行方式，就會如下圖所式：</p>
+<p><img src="https://i.imgur.com/Mu0Wonv.png" alt="image-20221227121240682" style="zoom:67%;" /></p>
+<p>到這邊就引出這篇文章最重要的想法：這種每當有 assignment
+發生時，immutable 型別所指向的記憶體都會改變，這種方法在 <a
+target="_blank" rel="noopener" href="https://docs.python.org/3/faq/programming.html#how-do-i-write-a-function-with-output-parameters-call-by-reference">python
+official document</a> 中稱作：<strong>Pass by Assignment</strong>。</p>
+<p>我們現在來看看如果把 Pass by Assignment 的想法加上 function
+會發生什麼事，以下範例我們將 immutable 變數當成參數傳進 function：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">fun</span>(<span class="params">x, y</span>):</span></span><br><span class="line">  x = <span class="number">5</span></span><br><span class="line">  y = y + <span class="number">1</span></span><br><span class="line">  <span class="built_in">print</span>(x, y)    <span class="comment"># 4 24</span></span><br><span class="line">  </span><br><span class="line">a = <span class="number">10</span></span><br><span class="line">b = <span class="number">20</span></span><br><span class="line"><span class="built_in">print</span>(a, b)      <span class="comment"># 10 20</span></span><br><span class="line"></span><br><span class="line">fun(a, b)</span><br><span class="line"><span class="built_in">print</span>(a, b)      <span class="comment"># 10 20</span></span><br></pre></td></tr></table></figure>
+<p>當 a b immutable 變數傳進 function 時 python
+會像其它的語言一樣，新增一塊記憶體並且 copy
+變數的值到這個記憶體中，不管在 function 中的任何操作都不會影響到外面 a,
+b 變數。</p>
+<p>也就是說 python 的 immutable 型別在 Pass by Assignment
+中，很像在其它語中稱作的 Call by Value，記憶體操作如下圖表示：</p>
+<p><img src="https://i.imgur.com/HMMzAbJ.png" alt="image-20221227121526401" style="zoom:50%;" /></p>
+<p>接下來是換 mutable 的部份。mutable
+型別的有：list、set、dict，這些型別如同 mutable
+的意義一樣：是可以在宣告後修改的，也就是在同一個記憶體位置中修改存的值，我們用以下的範例來看看：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">my_list = [<span class="number">1</span>, <span class="number">3</span>, <span class="number">6</span>]</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(my_list))     <span class="comment"># 4337133824</span></span><br><span class="line"></span><br><span class="line">my_list[<span class="number">0</span>] = <span class="number">100</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(my_list))     <span class="comment"># 4337133824</span></span><br><span class="line"></span><br><span class="line">my_list.append(<span class="number">900</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(my_list))     <span class="comment"># 4337133824</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://i.imgur.com/oL5rrrg.png" alt="image-20221227121550340" style="zoom:50%;" /></p>
+<p>可以發現不管我們對 my_list 做：修改值、append 等操作，id(my_list)
+都是不會變的，而正是 mutable
+的主要表現：可以在相同記憶體下修改其中的值</p>
+<p>那如果 mutable 型別遇上 function
+會發生什麼事呢？看看下面程式的例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">fun</span>(<span class="params">x, y</span>):</span></span><br><span class="line">  x.append(<span class="number">30</span>)</span><br><span class="line">  y[<span class="string">&#x27;id&#x27;</span>] = <span class="number">10</span></span><br><span class="line">  <span class="built_in">print</span>(x, y)    <span class="comment"># [10, 20, 30]</span></span><br><span class="line">  							 <span class="comment"># &#123;&#x27;name&#x27;: &#x27;John&#x27;, &#x27;age&#x27;: 16, &#x27;id&#x27;: 10&#125;</span></span><br><span class="line">  </span><br><span class="line">a = [<span class="number">10</span>, <span class="number">20</span>]</span><br><span class="line">b = &#123;</span><br><span class="line">  <span class="string">&#x27;name&#x27;</span>: <span class="string">&#x27;John&#x27;</span>,</span><br><span class="line">  <span class="string">&#x27;age&#x27;</span>: <span class="number">16</span>,</span><br><span class="line">&#125;</span><br><span class="line"><span class="built_in">print</span>(a, b)      <span class="comment"># [10, 20]</span></span><br><span class="line">								 <span class="comment"># &#123;&#x27;name&#x27;: &#x27;John&#x27;, &#x27;age&#x27;: 16&#125;</span></span><br><span class="line"></span><br><span class="line">fun(a, b)</span><br><span class="line"><span class="built_in">print</span>(a, b)      <span class="comment"># [10, 20, 30]</span></span><br><span class="line">  							 <span class="comment"># &#123;&#x27;name&#x27;: &#x27;John&#x27;, &#x27;age&#x27;: 16, &#x27;id&#x27;: 10&#125;</span></span><br></pre></td></tr></table></figure>
+<p>可以發現，當 a b 傳到 function 後，當 function 內部的 x y
+修改值後，外部的 a b 同時也會一起修改</p>
+<p>當 a b mutable 變數傳進 function 時，python 會將 function 內的變數 x
+指向 a 所指的記憶體位置，使得在 function 內修改值時，function
+外也會同時被修改 (因為就是同一個東西)</p>
+<p>也就是說 python 的 mutable 型別在 Pass by Assignment
+中，很像在其它語言中稱作的 Call by Reference，記憶體操作如下圖表示：</p>
+<p><img src="https://i.imgur.com/gFS3AVQ.png" alt="image-20221227121609941" style="zoom:50%;" /></p>
+<p>但是與正常 Call by Reference 不一樣的是，如果我們在 function 內是用
+assignment 重新給定一個 mutable 變數值時，python 會像 Call by Value
+一樣重新找一塊新的記憶體放，而 function 內外的值互不相影響，如下圖：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">fun</span>(<span class="params">x</span>):</span></span><br><span class="line">  x = [<span class="number">0</span>]</span><br><span class="line">  <span class="built_in">print</span>(<span class="built_in">id</span>(x)) <span class="comment"># 4337133860</span></span><br><span class="line">  </span><br><span class="line">a = [<span class="number">10</span>, <span class="number">20</span>]</span><br><span class="line"><span class="built_in">print</span>(a)      <span class="comment"># [10, 20]</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(a))  <span class="comment"># 4337133824</span></span><br><span class="line"></span><br><span class="line">fun(a)</span><br><span class="line"><span class="built_in">print</span>(a)      <span class="comment"># [10, 20]</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">id</span>(a))  <span class="comment"># 4337133824</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://i.imgur.com/nQ3pNSh.png" alt="image-20221227121638838" style="zoom:50%;" /></p>
+<p>可以發現當 <code>x = [0]</code> 後 python
+竟然是重新找一個記憶體去存放，所以當然也不會動到 a 裡面的值，而正是
+python Call by Assignment 最要留意的一個點，它並非「完全的」Call by
+Reference 喔 ~</p>
+<h3 id="reference">Reference</h3>
+<p><a
+target="_blank" rel="noopener" href="https://medium.com/@jobboy0101/js%E5%9F%BA%E7%A4%8E-primitive-type-v-s-object-types-f88f7c16f225">JS基礎：Primitive
+type v.s Object types</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://www.maxlist.xyz/2021/01/26/python-immutable-mutable-objects/">(圖片主要參考來源)
+[Python 基礎教學] 什麼是 Immutable &amp; Mutable objects</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://luka.tw/Python/%E5%9F%BA%E7%A4%8E%E6%95%99%E5%AD%B8/past/2021-09-21-is-python-call-by-sharing-122a4bf5a956/">(推薦
+說得很清楚！)【 Python 教學 】什麼是 Pass By Assignment？</a></p>
+<p><a
+target="_blank" rel="noopener" href="https://docs.python.org/3/faq/programming.html#how-do-i-write-a-function-with-output-parameters-call-by-reference">官方
+Call by Assignment Document</a></p>
+
+    </div>
+
+    
+    
+    
+      
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/python/" rel="tag"># python</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/12/27/%E5%A6%82%E4%BD%95%E5%9C%A8-docker-container-%E4%B8%AD-matplotlib-%E9%A1%AF%E7%A4%BA%E4%B8%AD%E6%96%87%EF%BC%9F/" rel="prev" title="如何在 docker container 中 matplotlib 顯示中文？">
+      <i class="fa fa-chevron-left"></i> 如何在 docker container 中 matplotlib 顯示中文？
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/12/27/Marp-%E8%B8%A9%E5%9D%91%E5%BF%83%E5%BE%97/" rel="next" title="Marp 踩坑心得">
+      Marp 踩坑心得 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#call-by-value-vs-call-by-reference"><span class="nav-number">1.</span> <span class="nav-text">Call by Value vs Call by
+Reference</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mutable-vs-immutable"><span class="nav-number">2.</span> <span class="nav-text">Mutable vs Immutable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reference"><span class="nav-number">3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/12/27/%E4%BB%80%E9%BA%BC%E6%98%AF-python-Pass-by-Assignment%EF%BC%9F/";
+    this.page.identifier = "2022/12/27/什麼是-python-Pass-by-Assignment？/";
+    this.page.title = "什麼是 python Pass by Assignment？";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

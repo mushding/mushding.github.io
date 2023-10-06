@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="Deformable DETR 的提出是為了解決 DETR 的兩個缺點：  訓練時間超長  因為 CNN 是 Attention Map 的一種特例，也就是說 Attention Map 的組合性多，效果效好，但是複雜度高  計算複雜度高  同上 Attention Map 是 \(N_q \cdot N_k\) 維的，而 CNN 是 \(HW\)   論文中使用了 Deformable conv">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！">
+<meta property="og:url" content="https://mushding.space/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="Deformable DETR 的提出是為了解決 DETR 的兩個缺點：  訓練時間超長  因為 CNN 是 Attention Map 的一種特例，也就是說 Attention Map 的組合性多，效果效好，但是複雜度高  計算複雜度高  同上 Attention Map 是 \(N_q \cdot N_k\) 維的，而 CNN 是 \(HW\)   論文中使用了 Deformable conv">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/6pAB8h3.png">
+<meta property="og:image" content="https://i.imgur.com/gr4y6sI.png">
+<meta property="og:image" content="https://i.imgur.com/7x5XPIH.png">
+<meta property="og:image" content="https://i.imgur.com/VuXpX2L.png">
+<meta property="og:image" content="https://i.imgur.com/WXO4wG5.png">
+<meta property="og:image" content="https://i.imgur.com/lhqVF0k.png">
+<meta property="og:image" content="https://i.imgur.com/IJQwucJ.png">
+<meta property="og:image" content="https://i.imgur.com/WXO4wG5.png">
+<meta property="og:image" content="https://i.imgur.com/TEeAUU8.png">
+<meta property="og:image" content="https://i.imgur.com/ob3Smaa.png">
+<meta property="og:image" content="https://i.imgur.com/46THxYA.png">
+<meta property="article:published_time" content="2021-07-08T18:33:30.000Z">
+<meta property="article:modified_time" content="2021-07-25T07:04:46.750Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/6pAB8h3.png">
+
+<link rel="canonical" href="https://mushding.space/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！ | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-07-09 02:33:30" itemprop="dateCreated datePublished" datetime="2021-07-09T02:33:30+08:00">2021-07-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2021-07-25 15:04:46" itemprop="dateModified" datetime="2021-07-25T15:04:46+08:00">2021-07-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.6k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>9 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Deformable DETR 的提出是為了解決 DETR 的兩個缺點：</p>
+<ul>
+<li>訓練時間超長
+<ul>
+<li>因為 CNN 是 Attention Map 的一種特例，也就是說 Attention Map
+的組合性多，效果效好，但是複雜度高</li>
+</ul></li>
+<li>計算複雜度高
+<ul>
+<li>同上 Attention Map 是 <span class="math inline">\(N_q \cdot
+N_k\)</span> 維的，而 CNN 是 <span
+class="math inline">\(HW\)</span></li>
+</ul></li>
+</ul>
+<p>論文中使用了 Deformable conv
+的觀念來達成減少運算量及加入多重解析度。</p>
+<p><a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2010.04159.pdf">https://arxiv.org/pdf/2010.04159.pdf</a></p>
+<p>keywords: Deformable DETR <span id="more"></span></p>
+<h3 id="計算時間長詳解">計算時間長詳解</h3>
+<p>假設 Batch 為一，圖片經 CNN 後的維度會變成 <span
+class="math inline">\((H \cdot W \cdot C)\)</span> 的特徵向量，後經
+reshape 變成 <span class="math inline">\((HW \cdot C)\)</span> 再加上
+Positional Enbedding 後放進 Transformer。其中 <span
+class="math inline">\((HW \cdot C)\)</span> 可看成長度為 <span
+class="math inline">\(HW\)</span> 大小為 <span
+class="math inline">\(C\)</span> 的 sequence</p>
+<p><img src="https://i.imgur.com/6pAB8h3.png"
+alt="image-20210709115659980" /></p>
+<p>以下 <span class="math inline">\(N_q N_k\)</span> 其實就是 <span
+class="math inline">\(HW\)</span>，則輸入向量 <span
+class="math inline">\((N \cdot C)\)</span>，乘上一個 <span
+class="math inline">\(W\)</span> 轉換矩陣 <span class="math inline">\((C
+\cdot 1)\)</span> 則計算 self attention 的時間複雜度為：</p>
+<p><span class="math display">\[
+O(N_qC^2 + N_kC^2 + N_qN_kC)
+\]</span></p>
+<p>分別對應</p>
+<p><span class="math inline">\(O(N_qC^2)\)</span> 計算 Query
+的複雜度</p>
+<p><span class="math inline">\(O(N_kC^2)\)</span> 計算 key 的複雜度</p>
+<p><span class="math inline">\(O(N_qN_kC)\)</span> Attention 的複雜度
+<span class="math inline">\((N_qC \cdot CN_k) = (N_qN_k)\)</span></p>
+<p><img src="https://i.imgur.com/gr4y6sI.png"
+alt="image-20210709120129060" /></p>
+<p>透過以上可以發現當圖片的解析度越大，Attention
+的計算複雜度為所有像素數量的平方，也就是 <span
+class="math inline">\((HW)^2 = N^2\)</span>
+，這就導致了圖片越大，模型越不好收斂的原因。</p>
+<h2 id="網路架構">網路架構</h2>
+<p>作者引用了 Deformable conv 這篇論文，最大的觀念就是突破以往 conv 固定
+size 的卷積核 (3x3) ，而是改用一個 (3x3) +
+偏移量的方式來做，如下圖：(每一個原 conv 的點都會加上一偏移量)</p>
+<p><img src="https://i.imgur.com/7x5XPIH.png"
+alt="image-20210709153338566" /></p>
+<p>而這個偏移量是透過一層的 conv 來自己學出來的，如下圖：(注意綠色 conv
+的深度為 2N，代表 x 軸與 y 軸的偏移量)</p>
+<p><img src="https://i.imgur.com/VuXpX2L.png"
+alt="image-20210709153515728" /></p>
+<p>原 Deformable 作者認為這個變型 conv 的好處有：</p>
+<ul>
+<li>對物體的形變能力更強 (超畸形都沒在怕)</li>
+<li>對圖片的視野更廣擴，因為不受矩型 conv
+的限制，可以自由奔放的去找特徵點。</li>
+</ul>
+<p>本論文 Deformable DFTR
+的作者就把這個觀念放到網路中的…任何地方，(基本上想到的地方都加上了)，包含
+CNN 層、Encoder</p>
+<p><img src="https://i.imgur.com/WXO4wG5.png"
+alt="image-20210709154053491" /></p>
+<h2 id="deformable-attention-module">Deformable Attention Module</h2>
+<p>於是作者提出 Deformable Attention Module 來解決 DETR 的問題，與原
+Attention 公式對比如下：(上式為原 Attention、下式為 Deformable
+Attention)</p>
+<p><span class="math display">\[
+\mathrm{MultiHeadAttn}(z_q,x_k)={\sum^M}_{m=1}W_m[\textcolor{purple}{\sum_{k\in\Omega_k}}A_{mqk}\cdot
+W&#39;_m\textcolor{red}{x_k}]
+\]</span></p>
+<p><span class="math display">\[
+\mathrm{DeformAttn}(z_q,p_q,x)={\sum^M}_{m=1}W_m[\textcolor{purple}{\sum^K_{k=1}}A_{mqk}\cdot
+W&#39;_mx\textcolor{red}{(p_q+\Delta p_{mqk})}]
+\]</span></p>
+<p>用非常白話來講兩個最大的不同點就是：</p>
+<ul>
+<li>key 的數量不同：
+<ul>
+<li>原本的 self attention 「每個」 query 會與「每個」 key
+做計算，如上一節提到的 <span
+class="math inline">\((N_qN_k)\)</span></li>
+<li>而 Deformable 則是使用一個自定數 <span
+class="math inline">\(K\)</span> ，來限制 query 只與 <span
+class="math inline">\(K\)</span> 個 key 做計算，變成 <span
+class="math inline">\(N_qK\)</span> (作者的 K 取 4，很小喔…)</li>
+</ul></li>
+<li>key 的意義不同：
+<ul>
+<li>原本的 self attention 就是單純計算第 i 個 query 與第 j 個 key
+之間的關系</li>
+<li>而 Deformable，則是引入了 Deformable 的觀念，把原本點上 <span
+class="math inline">\((p_q)\)</span> 做一個位移偏差 <span
+class="math inline">\(\Delta p_{mqk}\)</span> ，總偏移點的數量為 <span
+class="math inline">\(K\)</span>，如下圖所示：</li>
+<li>意義就變為「只與 <span class="math inline">\(p_q\)</span>
+點附近的其它點做 query key 的計算了」</li>
+</ul></li>
+</ul>
+<p><img src="https://i.imgur.com/lhqVF0k.png"
+alt="image-20210709155840876" /></p>
+<ul>
+<li>Attention 做法小不同：
+<ul>
+<li>在 Deformable DETR 中的 Attention 塊並不是把 key 與 query
+做內積，而是直接做線性轉換，之後再乘上 <span
+class="math inline">\(K\)</span> 個偏差特徵點就可以了。完整的 Deformable
+Attention Module 如下圖：</li>
+</ul></li>
+</ul>
+<p><img src="https://i.imgur.com/IJQwucJ.png"
+alt="image-20210709160943065" /></p>
+<p>改用這個架構時間複雜度算出來為：結果就會與圖片大小的 <span
+class="math inline">\(WH\)</span> 無關啦啦</p>
+<p><span class="math display">\[
+O(NKC^2)
+\]</span></p>
+<h2 id="multi-scale-deformable-attention-module">Multi-scale Deformable
+Attention Module</h2>
+<p>在這一章作者要來解決 DETR 中沒有使用 FPN
+使得在小物件偵測效果不好的問題。公式如下：</p>
+<p><span class="math display">\[
+\mathrm{MSDeformAttn}(z_q,\hat{p_q},\{x^i\}^L_{l=1}) =
+\sum^M_{m=1}W_m[\sum^L_{l=1}\sum^K_{k=1}A_{mlqk}\cdot
+W&#39;_mx^l(\phi_l(\hat{p_q})+\Delta p_{mlqk})]
+\]</span></p>
+<p>簡單來說就是在每一個 CNN 的特徵向量中，假設有 <span
+class="math inline">\(L\)</span> 層，每一層各取 <span
+class="math inline">\(K\)</span> 個點的意思，因此 key 可以表示成 <span
+class="math inline">\(K\cdot L\)</span>，在乘上 query
+後，這個意義其實就融合了各層的特徵，所以作者認為不需要再做 FPN。<span
+class="math inline">\(K\cdot L\)</span> 乘上 query
+天生就有相加的效果了。下圖為完整架構：</p>
+<p><img src="https://i.imgur.com/WXO4wG5.png"
+alt="image-20210709154053491" /></p>
+<p>下圖則為 CNN 特徵向量到 Encoder 的架構圖：可以發現 Encoder 的 C 皆為
+256，因此要對不同解析度的特徵圖做 1x1 conv，以及多做一層卷積層得到放大 6
+倍的特徵圖。</p>
+<p>所以 Encoder 中為 CNN 第 3, 4, 5, 6 層的特徵向量。</p>
+<p><img src="https://i.imgur.com/TEeAUU8.png"
+alt="image-20210709162927599" /></p>
+<h2 id="decoder">Decoder</h2>
+<p>Decoder 中有兩個 Block：cross-attention、self-attention。兩個
+attention 的三個 input 彼此都不太一樣。由於 Deformable attention
+只能用在與 CNN 相關的層上，所以 cross-attention 可以做修改，而
+self-attention 就維持原樣了。</p>
+<p><strong>self attention</strong></p>
+<p>Query 來自 Object query Key 來自 Object query
+維持原做法，不做任何調整</p>
+<p><strong>cross attention</strong></p>
+<p>Query 來自 Object query Key 來自 Encoder 的輸出 使用的是 Deformable
+Attetion Module</p>
+<p>另外最後一層的 FFN 預測 BBox 的輸出有一點點的不一樣，變成預測出相對於
+<span class="math inline">\(p_q\)</span> 參考點的偏移量 <span
+class="math inline">\(b_{q\{x,y,w,h\}}\)</span> (x軸 y軸 長
+寬)，(嗯…好像有那麼一點點 YOLO 的味道)，公式如下：</p>
+<p><span class="math display">\[
+\hat{b_q}= \{\sigma(b_{qx}+\sigma^{-1}(\hat{p_{qx}})), \sigma(b_{qy} +
+\sigma^{-1}(\hat{p_{qy}})), \sigma(b_{qw}), \sigma(b_{qh}))\}
+\]</span></p>
+<h2 id="experiments">Experiments</h2>
+<p>與 DETR 的效果相比：在 epoch 與 Traning GPU hours 上與 DETR
+少很多</p>
+<p><img src="https://i.imgur.com/ob3Smaa.png"
+alt="image-20210709170526824" /></p>
+<p>與目前的 SOTA 比較：</p>
+<p><img src="https://i.imgur.com/46THxYA.png"
+alt="image-20210709170657400" /></p>
+<h2 id="結論">結論</h2>
+<p>Deformable DETR 透過使用 Deformable 的方法來使 Transformer
+中的運算數減少許多，不再 depend on
+圖片大小，而且因運算減少所以可以加上類似 FPN 的多重解析度。效果比 DETR
+好一點點</p>
+<p>比較神奇的是不知道為什麼 BBox 的預測又跑回去 YOLO
+那一套了，說是比較好收斂啦…</p>
+<h2 id="reference">Reference</h2>
+<p>https://zhuanlan.zhihu.com/p/342261872</p>
+<p>https://blog.csdn.net/irving512/article/details/109713148</p>
+<p>https://www.jianshu.com/p/8524abf10018</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/24/Vision-Transformer-演化史-Training-data-efficient-image-transformers-distillation-through-attention-DeiT-使用知識蒸餾來改進-ViT-要使用大訓練集的缺點/" rel="bookmark">Vision Transformer 演化史: Training data-efficient image transformers & distillation through attention - DeiT 使用知識蒸餾來改進 ViT 要使用大訓練集的缺點</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/26/Vision-Transformer-演化史-Visual-Transformers-Token-based-Image-Representation-and-Processing-for-Computer-Vision-使用-visual-token-來強化傳統-CNN-的結果/" rel="bookmark">Vision Transformer 演化史: Visual Transformers: Token-based Image Representation and Processing for Computer Vision - 使用 visual token 來強化傳統 CNN 的結果</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/08/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9AEnd-to-End-Object-Detection-with-Transformers-DETR/" rel="prev" title="NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR">
+      <i class="fa fa-chevron-left"></i> NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/09/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-%E6%AD%A3%E5%BC%8F%E9%96%8B%E5%A7%8B-Transformer-%E5%85%83%E5%B9%B4/" rel="next" title="Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年">
+      Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A8%88%E7%AE%97%E6%99%82%E9%96%93%E9%95%B7%E8%A9%B3%E8%A7%A3"><span class="nav-number">1.</span> <span class="nav-text">計算時間長詳解</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B6%B2%E8%B7%AF%E6%9E%B6%E6%A7%8B"><span class="nav-number"></span> <span class="nav-text">網路架構</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#deformable-attention-module"><span class="nav-number"></span> <span class="nav-text">Deformable Attention Module</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#multi-scale-deformable-attention-module"><span class="nav-number"></span> <span class="nav-text">Multi-scale Deformable
+Attention Module</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#decoder"><span class="nav-number"></span> <span class="nav-text">Decoder</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#experiments"><span class="nav-number"></span> <span class="nav-text">Experiments</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B5%90%E8%AB%96"><span class="nav-number"></span> <span class="nav-text">結論</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number"></span> <span class="nav-text">Reference</span></a></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/07/09/NLP-%E8%88%87-CV-%E7%9A%84%E7%B5%90%E5%90%88%EF%BC%9ADeformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-%E6%AD%A3%E9%9D%A2%E5%B0%8D%E6%B1%BA-DETR-%E7%9A%84%E7%BC%BA%E9%BB%9E%EF%BC%81/";
+    this.page.identifier = "2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/";
+    this.page.title = "NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

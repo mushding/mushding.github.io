@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="vscode 真是勘稱一代開發神器，上面一大堆好用套件，不僅讓你的開發環境變得美美的，同時還提供了相當便捷的功能。以下是我這兩三年來，在實驗室進行遠端開發，所記錄下來的一些使用心得。 keywords: vscode">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用 vscode 遠端 docker 開發使用教學">
+<meta property="og:url" content="https://mushding.space/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="vscode 真是勘稱一代開發神器，上面一大堆好用套件，不僅讓你的開發環境變得美美的，同時還提供了相當便捷的功能。以下是我這兩三年來，在實驗室進行遠端開發，所記錄下來的一些使用心得。 keywords: vscode">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/ytZdWhk.png">
+<meta property="og:image" content="https://i.imgur.com/FFBYp62.png">
+<meta property="og:image" content="https://i.imgur.com/chTKjOK.png">
+<meta property="og:image" content="https://i.imgur.com/ZQDVhvy.png">
+<meta property="og:image" content="https://i.imgur.com/jKjX7v8.png">
+<meta property="og:image" content="https://i.imgur.com/3a8suR4.png">
+<meta property="og:image" content="https://i.imgur.com/tkgVDXw.png">
+<meta property="og:image" content="https://i.imgur.com/xpsA9vL.png">
+<meta property="og:image" content="https://i.imgur.com/APw02LC.png">
+<meta property="og:image" content="https://i.imgur.com/laq1Qwm.png">
+<meta property="og:image" content="https://i.imgur.com/VLkKv28.png">
+<meta property="article:published_time" content="2022-07-07T06:30:13.000Z">
+<meta property="article:modified_time" content="2022-07-07T11:22:11.652Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="remote ssh">
+<meta property="article:tag" content="vscode">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/ytZdWhk.png">
+
+<link rel="canonical" href="https://mushding.space/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>使用 vscode 遠端 docker 開發使用教學 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          使用 vscode 遠端 docker 開發使用教學
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2022-07-07 14:30:13 / 修改時間：19:22:11" itemprop="dateCreated datePublished" datetime="2022-07-07T14:30:13+08:00">2022-07-07</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%9C%E9%96%8B%E7%99%BC%E5%BF%83%E5%BE%97/" itemprop="url" rel="index"><span itemprop="name">雜開發心得</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/07/07/使用-vscode-遠端-docker-開發使用教學/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>1.9k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>5 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>vscode
+真是勘稱一代開發神器，上面一大堆好用套件，不僅讓你的開發環境變得美美的，同時還提供了相當便捷的功能。以下是我這兩三年來，在實驗室進行遠端開發，所記錄下來的一些使用心得。</p>
+<p>keywords: vscode <span id="more"></span></p>
+<p>對於新加入 vscode
+的人最大的困難就在於熟悉介面，光這一步就不知道勸退多少人了，即然大家不想學習如何使用介面…那我們就先來步置介面吧
+XD，把介面弄的美美的眼睛看起來非常舒服，自然就會有想使用 vscode 的動機啦
+XD</p>
+<h2 id="美美的套件-事前準備">美美的套件 (事前準備)</h2>
+<p>我的 vscode 美美之路受以下文章的起萌：<a
+target="_blank" rel="noopener" href="https://blog.goodjack.tw/2018/03/visual-studio-code-extensions.html">小克的
+Visual Studio Code
+必裝擴充套件（Extensions）私藏推薦</a>，大家可以點進去多看看，裡面有超多推薦的套件，其中我會再整理出幾個「一定」要裝的套件</p>
+<p>One Dark Pro。一個裝下去眼睛就會得到解放的套件 <img
+src="https://i.imgur.com/5EFRD1R.png" alt="Image" /></p>
+<p>Material Icon Theme。側邊檔案目錄變得清楚明瞭，檔案類型清清楚楚 <img
+src="https://i.imgur.com/BijJLgI.png" alt="Image" /></p>
+<p>GitLens。有在用 Git 的話必裝，可以方便切換 commit，merge
+版本，還自帶全自動 Git blame 讓你簡單找到 bug 戰犯 <img
+src="https://i.imgur.com/NlflEAd.png" alt="Image" /></p>
+<p>CodeSnap。程式碼截圖神器，就算使用 window 電腦，也可以讓你截出 mac
+的味道 <img src="https://i.imgur.com/ytZdWhk.png" alt="Image" /></p>
+<p>Path Intellisense。在程式中輸入檔案位置神器，可以讓你用 Tab 輸入目錄
+<img src="https://i.imgur.com/FFBYp62.png" alt="Image" /></p>
+<h2 id="ssh-遠端工作系列">SSH 遠端工作系列</h2>
+<p>以往我們在使用 SSH 遠端工作時，如果是 mac 使用者可以很方便的用
+Terminal 打指令進入，如果是 windows 使用者也可以用 mobaXTerm
+作為替代。但是如果遇到需要修改程式碼，又不想用 vi、nano 來開起時，這時
+vscode Remote 就是一個很好的選擇了</p>
+<p>首先先安裝 <img src="https://i.imgur.com/chTKjOK.png"
+alt="Image" /></p>
+<p>完成後左邊選單就會多一個螢幕的圖示，這個就是 SSH 連線的地方 <img
+src="https://i.imgur.com/ZFv3Hhr.png" alt="Image" /></p>
+<p>點進 SSH 圖示後，選擇上方齒輪，進入設定 <img
+src="https://i.imgur.com/jK0oRxR.png" alt="Image" /></p>
+<p>選擇在使用者/Users 底下的 .ssh/config 檔案，vscode
+會自動在電腦對應的位置新增空白檔案，以後所有連線的設定都會存在這裡面。下面講解各個欄位用途
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Host server_自定名稱</span><br><span class="line">	HostName IP_位置</span><br><span class="line">	User 使用者名稱</span><br><span class="line">	Port 埠號</span><br><span class="line">	IdentityFile RSA 非對稱式私鑰位置</span><br></pre></td></tr></table></figure></p>
+<p>設定好後就會在左邊出現自定名稱的電腦圖示，按下右邊的「加資料夾」圖示後，就可以直接用
+vscode 連 ssh 啦 <img src="https://i.imgur.com/ZQDVhvy.png"
+alt="Image" /></p>
+<h2 id="docker">Docker</h2>
+<p>很多時候我們連線到遠端，還會在遠端 server 再建立 docker
+虛擬環境，很多時候會需要下到 docker 指令，但是…如果說有 GUI
+可以操作呢…？</p>
+<p>vscode 可以在遠端 server 上再安裝套件，這個套件是與本地分開的，專屬於
+server。我們先來下載 docker 吧</p>
+<p><img src="https://i.imgur.com/jKjX7v8.png" alt="Image" /></p>
+<p>左手邊就會出現小鯨魚的圖案</p>
+<p><img src="https://i.imgur.com/3a8suR4.png" alt="Image" /></p>
+<p>按下去之後就可以看到 server 各種
+image、container、volume...，非常的視覺化 <img
+src="https://i.imgur.com/tuGdJp0.png" alt="Image" /></p>
+<p>對任何 image 可以按右鍵把它 run 起來；對任何的 container
+也可以按右鍵進到 bash 裡面</p>
+<p><img src="https://i.imgur.com/tkgVDXw.png" alt="Image" /></p>
+<p>這個時候 vscode 下方的 terminal 就會更改成 docker 虛擬環境裡的
+terminal 囉！</p>
+<h2 id="remote---container">Remote - Container</h2>
+<p>有時在開發的時候會發生以下的問題：</p>
+<p><img src="https://i.imgur.com/xpsA9vL.png" alt="Image" /></p>
+<p>vscode 沒有讀到虛擬機裡的 python 環境位置，導致不管我們在 docker
+裡面裝了什麼套件，vscode 都不會知道，這個問題會導致 python
+套件無法給你提示，例如打 torch 後面會很多很多其它 function 之類的</p>
+<p>為了要解決這個問題，我們需要再安裝一個套件：Remote - Container</p>
+<p><img src="https://i.imgur.com/APw02LC.png" alt="Image" /></p>
+<p>安裝完後再按 ssh
+的電腦圖示會發現，最上面多了一個下拉式選單，裡面有兩個選項：ssh
+舊的連線，以及 containers 新的連線</p>
+<p><img src="https://i.imgur.com/laq1Qwm.png" alt="Image" /></p>
+<p>這個 container 的作用類似 ssh，有點像是「用 ssh 的方式連線進 docker
+的環境中」，所以以我們的這個例子，如果我們要到遠端的 docker
+開發，我們先要：一、連線到遠端，二、連線到 docker，兩層的連線 XD</p>
+<p>如果遠端已經建立好的 container 時，選 containers
+下面會多出許多可連線的 server 選項，這些選項都是 docker container
+(也是這個套件名字的由來嘛)，在對應的 container 下按「加分頁圖示」</p>
+<p><img src="https://i.imgur.com/VLkKv28.png" alt="Image" /></p>
+<p>它會安裝一些東西，這個步驟可能要跑一陣子，我自己的經驗大約是 3 ~ 5
+分鐘，跑完之後就成功的進到了 docker container 的環境中啦！在這裡面所有的
+python 套件都正常運作，自然也就不會有黃黃底線的問題了！</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/12/22/vscode remote-ssh 問題踩坑心得/" rel="bookmark">vscode remote-ssh 問題踩坑心得</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/12/20/nvidia-driver-安裝踩坑心得/" rel="bookmark">nvidia driver、cuDNN、CUDA 安裝踩坑心得</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/12/20/Docker-學習筆記/" rel="bookmark">Docker 學習筆記</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/12/27/如何在-docker-container-中-matplotlib-顯示中文？/" rel="bookmark">如何在 docker container 中 matplotlib 顯示中文？</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/docker/" rel="tag"># docker</a>
+              <a href="/tags/remote-ssh/" rel="tag"># remote ssh</a>
+              <a href="/tags/vscode/" rel="tag"># vscode</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/07/UNETR-Transformers-for-3D-Medical-Image-Segmentation-%E6%8A%8A-Transformer-%E8%88%87-U-Net-%E7%B5%90%E5%90%88/" rel="prev" title="UNETR: Transformers for 3D Medical Image Segmentation: 把 Transformer 與 U-Net 結合">
+      <i class="fa fa-chevron-left"></i> UNETR: Transformers for 3D Medical Image Segmentation: 把 Transformer 與 U-Net 結合
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/07/18/STA-Spatial-Temporal-Attention-for-Large-Scale-Video-based-Person-Re-Identification-%E5%BD%B1%E7%89%87%E7%A9%BA%E9%96%93%E6%99%82%E9%96%93%E6%B3%A8%E6%84%8F%E5%8A%9B/" rel="next" title="STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力">
+      STA: Spatial-Temporal Attention for Large-Scale Video-based Person Re-Identification 影片空間時間注意力 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BE%8E%E7%BE%8E%E7%9A%84%E5%A5%97%E4%BB%B6-%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99"><span class="nav-number">1.</span> <span class="nav-text">美美的套件 (事前準備)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ssh-%E9%81%A0%E7%AB%AF%E5%B7%A5%E4%BD%9C%E7%B3%BB%E5%88%97"><span class="nav-number">2.</span> <span class="nav-text">SSH 遠端工作系列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#docker"><span class="nav-number">3.</span> <span class="nav-text">Docker</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#remote---container"><span class="nav-number">4.</span> <span class="nav-text">Remote - Container</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/07/07/%E4%BD%BF%E7%94%A8-vscode-%E9%81%A0%E7%AB%AF-docker-%E9%96%8B%E7%99%BC%E4%BD%BF%E7%94%A8%E6%95%99%E5%AD%B8/";
+    this.page.identifier = "2022/07/07/使用-vscode-遠端-docker-開發使用教學/";
+    this.page.title = "使用 vscode 遠端 docker 開發使用教學";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

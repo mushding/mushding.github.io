@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="繼上一次我們成功的在本地端 localhost 做出一個靜態的網頁，在這一次的教學中，我會介紹如何把靜態網頁使用 docker 包起來佈署，以及利用域名、DNS 真的架出一個屬於個人的網站。於其它網路上的教學文不同的是，因為考慮到未來我有可能要加上動態網頁的部份，所以我沒有使用 gitpage 去做。 keywords: hexo, docker, DNS, cloudflare">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手 hexo 從零開始教學(二)">
+<meta property="og:url" content="https://mushding.space/2021/07/02/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8-%E4%BA%8C/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="繼上一次我們成功的在本地端 localhost 做出一個靜態的網頁，在這一次的教學中，我會介紹如何把靜態網頁使用 docker 包起來佈署，以及利用域名、DNS 真的架出一個屬於個人的網站。於其它網路上的教學文不同的是，因為考慮到未來我有可能要加上動態網頁的部份，所以我沒有使用 gitpage 去做。 keywords: hexo, docker, DNS, cloudflare">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/wSdKZOE.png">
+<meta property="og:image" content="https://i.imgur.com/toa02RC.png">
+<meta property="og:image" content="https://i.imgur.com/yPq8RPZ.png">
+<meta property="article:published_time" content="2021-07-02T06:27:06.000Z">
+<meta property="article:modified_time" content="2022-02-22T16:57:09.070Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="hexo">
+<meta property="article:tag" content="DNS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/wSdKZOE.png">
+
+<link rel="canonical" href="https://mushding.space/2021/07/02/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8-%E4%BA%8C/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>手把手 hexo 從零開始教學(二) | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/07/02/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8-%E4%BA%8C/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手 hexo 從零開始教學(二)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2021-07-02 14:27:06" itemprop="dateCreated datePublished" datetime="2021-07-02T14:27:06+08:00">2021-07-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2022-02-23 00:57:09" itemprop="dateModified" datetime="2022-02-23T00:57:09+08:00">2022-02-23</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hexo-%E5%BF%83%E5%BE%97%E7%AD%86%E8%A8%98/" itemprop="url" rel="index"><span itemprop="name">hexo 心得筆記</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/07/02/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8-%E4%BA%8C/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/07/02/手把手-hexo-從零開始教學-二/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>3.8k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>9 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>繼上一次我們成功的在本地端 <code>localhost</code>
+做出一個靜態的網頁，在這一次的教學中，我會介紹如何把靜態網頁使用 docker
+包起來佈署，以及利用域名、DNS
+真的架出一個屬於個人的網站。於其它網路上的教學文不同的是，因為考慮到未來我有可能要加上動態網頁的部份，所以我沒有使用
+gitpage 去做。</p>
+<p>keywords: hexo, docker, DNS, cloudflare <span id="more"></span></p>
+<h2 id="生成靜態資料">生成靜態資料</h2>
+<p>所謂的靜態資料就是指把 js, css
+經一連串編釋，變成一個最小單位的一個檔案，可以把它想像成一個程式碼都以經最佳化的濃縮檔。而這個資料夾在習慣上會取名叫
+public 或者是 build
+(這些都可以在設定中更改)，而我們只需要把這份檔案，不管用什麼方法把它部署上去，我們的網站就搞定了。</p>
+<p>在 hexo 中，生成靜態資料的指令是：<code>hexo generate</code> 或簡寫為
+<code>hexo g</code>。執行就可以看到工作目錄底下多了一份
+<code>public</code> 檔，而那個就是接下來的重點了。</p>
+<h2 id="docker">docker</h2>
+<p>我就不在這裡多說什麼是 docker，但我為了想要移植方便因此多用一個
+docker。</p>
+<p>在工作目錄底下新增一個 <code>Dockerfile</code> <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">touch Dockerfile</span><br></pre></td></tr></table></figure>
+在裡面新增以下的程式： <figure class="highlight docker"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> nginx:stable-alpine</span><br><span class="line"><span class="keyword">COPY</span><span class="bash"> public /usr/share/nginx/html</span></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">80</span></span><br><span class="line"><span class="keyword">CMD</span><span class="bash"> [<span class="string">&quot;nginx&quot;</span>, <span class="string">&quot;-g&quot;</span>, <span class="string">&quot;daemon off;&quot;</span>]</span></span><br></pre></td></tr></table></figure> 在這裡我使用 nginx
+這個反向代理套件。以下是 Dockerfile 內容簡單描述： 1. 會先去 Dockerhub
+上下載對應的 image 2. 把剛剛生成出來的 public 複製到 nginx
+底下的資料夾，nginx 會自己去偵測它 3. 把 Docker 中的 80 port 打開 (80
+port 是 http 的 port) 4. 起動 nginx</p>
+<p>最後執行以下指令，等它跑了一陣子後就會建立好一個
+container，並且執行喔 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker build</span><br><span class="line">docker run </span><br></pre></td></tr></table></figure></p>
+<h2 id="nginx">nginx</h2>
+<p>後來我還在外面再加上一層 nginx
+來管理未來可能會新增前後端的需求。以下是 nginx 的 Dockerfile 內容
+<figure class="highlight docker"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> nginx </span><br><span class="line"><span class="keyword">COPY</span><span class="bash"> ./default.conf /etc/nginx/conf.d/default.conf</span></span><br></pre></td></tr></table></figure> 然後新增一個 default.conf 檔案，裡面是來設定 nginx 的。
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">  listen 80;</span><br><span class="line">  listen 443;</span><br><span class="line"></span><br><span class="line">  location / &#123;</span><br><span class="line">    proxy_pass         http://frontend;</span><br><span class="line">    proxy_redirect     off;</span><br><span class="line">    proxy_set_header   Host $host;</span><br><span class="line">    proxy_set_header   X-Real-IP $remote_addr;</span><br><span class="line">    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;</span><br><span class="line">    proxy_set_header   X-Forwarded-Host $server_name;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>listen 80、listen 443 是來監聽這些 port 到主機上的，location
+則是未來管理網址來達成重新導向的。記得要在 proxy_pass 的地方打上 Docker
+中對應的 bridge 名稱，這樣 Docker 的前後端才可互相溝通。</p>
+<h2 id="docker-compose">docker-compose</h2>
+<p>因為我們有太多 Dockerfile 啦，還是用 docker-compose
+來好好整理統一一下。</p>
+<p>在最上一層資料夾新增一個 <code>docker-compose.yaml</code> 檔
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">touch docker-compose.yaml</span><br></pre></td></tr></table></figure> 在裡面新增對應的程式碼： <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;3&#x27;</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">frontend:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">./hexo</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">&quot;hexoapp:1.0.0&quot;</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">networks:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">sub-etha</span></span><br><span class="line">    <span class="attr">volumes:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">./hexo/public:/usr/share/nginx/html</span></span><br><span class="line">  <span class="attr">revproxy:</span></span><br><span class="line">    <span class="attr">build:</span> <span class="string">./nginx</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">&quot;reverseproxy:1.0.0&quot;</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">networks:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">sub-etha</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">443</span><span class="string">:443</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">80</span><span class="string">:80</span></span><br><span class="line">    <span class="attr">depends_on:</span> </span><br><span class="line">      <span class="bullet">-</span> <span class="string">frontend</span></span><br><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">sub-etha:</span></span><br><span class="line">    <span class="attr">driver:</span> <span class="string">bridge</span></span><br></pre></td></tr></table></figure></p>
+<p>接著輸入： <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose up --build</span><br></pre></td></tr></table></figure> 就會看到全部的 Dockerfile
+都被我們串接在一起啦，這個時候再回到 <code>localhost</code>
+可以看到我們的網頁有成功運行，(這個時候你可能會想：阿這不就跟剛剛一模一樣，同樣的網址阿效果也相同，為什麼我們還繞了一大圈用這麼多東西呢？)。其實這些準備，都是為了讓我們未來不管是擴充，或是移植到其它伺服器上時更加方便的事前準備喔。</p>
+<p>接下來 build 好 container 後，我們就可以讓我們的網頁上線啦啦啦。</p>
+<h2 id="域名-dns">域名 &amp; DNS</h2>
+<h3 id="porkbun">porkbun</h3>
+<p>現在可以看到我們的網址都是一串神秘的 ip 位置，或是
+localhost，這是因為我們是把網站架在自己的電腦上的，自己的電腦連上自己架的網站非常合理，但是如果今天你的目標是要讓全世界的人都可以看到你認真經營的網站的話，就必須要有三個條件啦</p>
+<ol type="1">
+<li>一個固定 ip</li>
+<li>一個域名</li>
+<li>一個機器</li>
+</ol>
+<p>通常在家裡面使用的網路都是「浮動網路」ip
+位置每格一段時間就變，一旦變了就沒有人可以存取到你的網站了，而要一個固定
+ip 解決方法有很多，可以打電話到 ISP (中華電信…) 去尋問，或是用 PPPoE
+也可以。(或是有錢的話可以去 azure 或是 GCP 要一個也可以 w)</p>
+<p>首先先去買域名，這裡我是向 <a target="_blank" rel="noopener" href="https://porkbun.com/">porkbun</a>
+買，這裡的網域又大又…阿是又多又便宜。</p>
+<p>選好一個自己喜歡的名字後，接著選副域名，通常越有名的就會越貴，像是
+.com .org 阿，那越不有名或看起來就像詐騙網站的 ww 就會非常便宜，像是
+.xyz ...那就看自己的需求囉。porkbun
+第一年會有優惠，從第二年開始要續約的話才會錢一點。</p>
+<p>買好後就會看到下列畫面： <img src="https://i.imgur.com/wSdKZOE.png"
+alt="image-20210702152427067" /></p>
+<p>一共有兩個重點：DNS 以及 DNS record，DNS 是 Domain Name Server
+的縮寫，負責把 ip 位置轉換成剛剛買的網域，DNS record
+則是一個轉換的設定。</p>
+<p>接下來我會介紹 cloudflare ，一個免費而且非常好用的 DNS
+代管伺服器，它可以免費提供 Whois 服務 (查不到你的 ip 位置)，以及擋下一些
+DDoS 攻擊。</p>
+<h3 id="cloudflare">cloudflare</h3>
+<p>到 <a target="_blank" rel="noopener" href="https://dash.cloudflare.com/">cloudflare</a>
+中，先註冊一個帳號，接著新增一個網域，他會要叫你先驗證 DNS，也就是設把
+DNS 改成 cloudflare，回到 porkbun，點開 Authoratative nameservice
+把裡面的東西全刪了，貼上 cloudflare 提供的 DNS。接下來 porkbun
+會說這個設定可以要等最多 48 小時才會生效，因為 DNS cache
+的問題，(但我個人的經驗差不多 1 個小時就差不多了 w)</p>
+<p><img src="https://i.imgur.com/toa02RC.png"
+alt="image-20210702154142658" /></p>
+<p>一但 cloudflare 驗證完後會寄一封通知信，接著 porkbun 的 DNS record
+設定就會換移到 cloudflare 上啦。</p>
+<p>回到 cloudflare ，點開 DNS，選擇 A (就是指單純轉換的意思)，Name
+寫買的網域名稱，Content 則是 ipv4 的位置，也可以加上 www
+的設定，就可以一併把 <code>www.website.com</code> 導向到
+<code>website.com</code>。</p>
+<p><img src="https://i.imgur.com/yPq8RPZ.png"
+alt="image-20210702154406198" /></p>
+<p>恭禧啦！設定完成了！可以直接利用買的網域名稱連上自己架的網站伺服器了！</p>
+<h2 id="homepage-雷">homepage 雷</h2>
+<p>如果架好後發現，咦奇怪，我的網站怎麼 js css
+跑掉了，排版變的怪怪的，這極有可能是因為 homepage 設定的問題，因為在
+<code>hexo generate</code> 因為我們把 public
+資料拿到其它地方去，網頁的「首頁」位置跑掉了，在 package.json
+最上面加上這一行就可以解決問題了。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// &quot;homepage&quot;: &quot;&lt;你的網頁網域&gt;&quot;</span></span><br><span class="line"><span class="string">&quot;homepage&quot;</span>: <span class="string">&quot;https://mushding.space/&quot;</span></span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/06/27/手把手 hexo 從零開始教學(零)/" rel="bookmark">手把手 hexo 從零開始教學(零)</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/06/30/手把手-hexo-從零開始教學/" rel="bookmark">手把手 hexo 從零開始教學(一)</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/hexo/" rel="tag"># hexo</a>
+              <a href="/tags/DNS/" rel="tag"># DNS</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/30/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8/" rel="prev" title="手把手 hexo 從零開始教學(一)">
+      <i class="fa fa-chevron-left"></i> 手把手 hexo 從零開始教學(一)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/04/%E4%BD%BF%E7%94%A8%E6%B7%B1%E5%BA%A6%E5%AD%B8%E7%BF%92%E5%9C%A8-super-resolution-%E6%87%89%E7%94%A8%E6%95%B4%E7%90%86/" rel="next" title="使用深度學習在 super resolution 整理 (一)">
+      使用深度學習在 super resolution 整理 (一) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E9%9D%9C%E6%85%8B%E8%B3%87%E6%96%99"><span class="nav-number">1.</span> <span class="nav-text">生成靜態資料</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#docker"><span class="nav-number">2.</span> <span class="nav-text">docker</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nginx"><span class="nav-number">3.</span> <span class="nav-text">nginx</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#docker-compose"><span class="nav-number">4.</span> <span class="nav-text">docker-compose</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%9F%E5%90%8D-dns"><span class="nav-number">5.</span> <span class="nav-text">域名 &amp; DNS</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#porkbun"><span class="nav-number">5.1.</span> <span class="nav-text">porkbun</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cloudflare"><span class="nav-number">5.2.</span> <span class="nav-text">cloudflare</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#homepage-%E9%9B%B7"><span class="nav-number">6.</span> <span class="nav-text">homepage 雷</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/07/02/%E6%89%8B%E6%8A%8A%E6%89%8B-hexo-%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E6%95%99%E5%AD%B8-%E4%BA%8C/";
+    this.page.identifier = "2021/07/02/手把手-hexo-從零開始教學-二/";
+    this.page.title = "手把手 hexo 從零開始教學(二)";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

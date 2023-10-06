@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="研究所社群媒體探勘的期末作業，分析 PTT 的推薦系統，使用 LightGCN 作為主網路 keywords: LightGCN">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LightGCN pytorch 原始碼筆記">
+<meta property="og:url" content="https://mushding.space/2022/04/28/LightGCN-pytorch-%E5%8E%9F%E5%A7%8B%E7%A2%BC%E7%AD%86%E8%A8%98/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="研究所社群媒體探勘的期末作業，分析 PTT 的推薦系統，使用 LightGCN 作為主網路 keywords: LightGCN">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://i.imgur.com/7eaavGC.png">
+<meta property="og:image" content="https://i.imgur.com/CMQIQUJ.png">
+<meta property="og:image" content="https://i.imgur.com/BiT5LYW.png">
+<meta property="article:published_time" content="2022-04-28T03:23:08.000Z">
+<meta property="article:modified_time" content="2022-04-28T07:07:24.150Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta property="article:tag" content="Source Code">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.imgur.com/7eaavGC.png">
+
+<link rel="canonical" href="https://mushding.space/2022/04/28/LightGCN-pytorch-%E5%8E%9F%E5%A7%8B%E7%A2%BC%E7%AD%86%E8%A8%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>LightGCN pytorch 原始碼筆記 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2022/04/28/LightGCN-pytorch-%E5%8E%9F%E5%A7%8B%E7%A2%BC%E7%AD%86%E8%A8%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LightGCN pytorch 原始碼筆記
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2022-04-28 11:23:08 / 修改時間：15:07:24" itemprop="dateCreated datePublished" datetime="2022-04-28T11:23:08+08:00">2022-04-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2022/04/28/LightGCN-pytorch-%E5%8E%9F%E5%A7%8B%E7%A2%BC%E7%AD%86%E8%A8%98/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/04/28/LightGCN-pytorch-原始碼筆記/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>11k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>28 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>研究所社群媒體探勘的期末作業，分析 PTT 的推薦系統，使用 LightGCN
+作為主網路</p>
+<p>keywords: LightGCN <span id="more"></span></p>
+<h3 id="程式簡介">程式簡介</h3>
+<p>使用 MovieLens (small) 資料集。由 9,000 個電影及 600 個使用者建立出
+100,000 個評價 (edge)</p>
+<h3 id="import-data">import data</h3>
+<p>這一步在把所有會用到的套件 import
+進來，一共四個部份。雜七雜八套件、sklearn 分資料集、Pytorch、Pytorch
+Geometric <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># import required modules</span></span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">from</span> tqdm <span class="keyword">import</span> tqdm</span><br><span class="line"><span class="keyword">import</span> pandas <span class="keyword">as</span> pd</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"><span class="comment"># import one line split data set</span></span><br><span class="line"><span class="keyword">from</span> sklearn.model_selection <span class="keyword">import</span> train_test_split</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">from</span> torch <span class="keyword">import</span> nn, optim, Tensor</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> torch_sparse <span class="keyword">import</span> SparseTensor, matmul</span><br><span class="line"></span><br><span class="line"><span class="comment"># import Pytorch Geometric</span></span><br><span class="line"><span class="keyword">from</span> torch_geometric.utils <span class="keyword">import</span> structured_negative_sampling</span><br><span class="line"><span class="keyword">from</span> torch_geometric.data <span class="keyword">import</span> download_url, extract_zip</span><br><span class="line"><span class="keyword">from</span> torch_geometric.nn.conv.gcn_conv <span class="keyword">import</span> gcn_norm</span><br><span class="line"><span class="keyword">from</span> torch_geometric.nn.conv <span class="keyword">import</span> MessagePassing</span><br><span class="line"><span class="keyword">from</span> torch_geometric.typing <span class="keyword">import</span> Adj</span><br></pre></td></tr></table></figure></p>
+<h3 id="資料集前處理">資料集前處理</h3>
+<p>一共有四個處理：下載資料、讀取 node 資料、讀取 edge 資料、分
+Training、Testing、Validation 資料、轉換為 SparseTensor</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># download the dataset</span></span><br><span class="line">url = <span class="string">&#x27;https://files.grouplens.org/datasets/movielens/ml-latest-small.zip&#x27;</span></span><br><span class="line">extract_zip(download_url(url, <span class="string">&#x27;.&#x27;</span>), <span class="string">&#x27;.&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 定義資料位置</span></span><br><span class="line">movie_path = <span class="string">&#x27;./ml-latest-small/movies.csv&#x27;</span></span><br><span class="line">rating_path = <span class="string">&#x27;./ml-latest-small/ratings.csv&#x27;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># load user and movie nodes</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">load_node_csv</span>(<span class="params">path, index_col</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;Loads csv containing node information</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        path (str): path to csv file</span></span><br><span class="line"><span class="string">        index_col (str): column name of index column</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        dict: mapping of csv row to node id</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># 把 user item 的 node id 給讀出來</span></span><br><span class="line">    <span class="comment"># (1) 先用 panda 讀取 csv 檔，且把 index_col 設為目標欄位 (指定為 index 的用意)</span></span><br><span class="line">    <span class="comment"># (2) 用 df.index 讀取 index 資料，再用 .unique() 使得 index 唯一 (不重覆)</span></span><br><span class="line">    <span class="comment"># (3) 建立一個 mapping 為 &#123;原 user item id: 從 0 開始的編碼&#125;</span></span><br><span class="line">    df = pd.read_csv(path, index_col=index_col)</span><br><span class="line">    mapping = &#123;index: i <span class="keyword">for</span> i, index <span class="keyword">in</span> <span class="built_in">enumerate</span>(df.index.unique())&#125;</span><br><span class="line">    <span class="keyword">return</span> mapping</span><br><span class="line"></span><br><span class="line"><span class="comment"># index_col 為欄位名稱</span></span><br><span class="line">user_mapping = load_node_csv(rating_path, index_col=<span class="string">&#x27;userId&#x27;</span>)</span><br><span class="line">movie_mapping = load_node_csv(movie_path, index_col=<span class="string">&#x27;movieId&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># load edges between users and movies</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">load_edge_csv</span>(<span class="params">path, src_index_col, src_mapping, dst_index_col, dst_mapping, link_index_col, rating_threshold=<span class="number">4</span></span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;Loads csv containing edges between users and items</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        path (str): path to csv file</span></span><br><span class="line"><span class="string">        src_index_col (str): column name of users</span></span><br><span class="line"><span class="string">        src_mapping (dict): mapping between row number and user id</span></span><br><span class="line"><span class="string">        dst_index_col (str): column name of items</span></span><br><span class="line"><span class="string">        dst_mapping (dict): mapping between row number and item id</span></span><br><span class="line"><span class="string">        link_index_col (str): column name of user item interaction</span></span><br><span class="line"><span class="string">        rating_threshold (int, optional): Threshold to determine positivity of edge. Defaults to 4.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        torch.Tensor: 2 by N matrix containing the node ids of N user-item edges</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    df = pd.read_csv(path)</span><br><span class="line">    edge_index = <span class="literal">None</span></span><br><span class="line">    <span class="comment"># 把每一個 user item id 做一對一對應</span></span><br><span class="line">    <span class="comment"># 轉換為從 0 開始的編碼，edge 的起點：src、終點：dst</span></span><br><span class="line">    src = [src_mapping[index] <span class="keyword">for</span> index <span class="keyword">in</span> df[src_index_col]]</span><br><span class="line">    dst = [dst_mapping[index] <span class="keyword">for</span> index <span class="keyword">in</span> df[dst_index_col]]</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># (1) 利用 rating 的高低作為 edge_attr (0.5 ~ 5)</span></span><br><span class="line">    <span class="comment"># (2) 把 numpy 格式轉為 pytorch tensor</span></span><br><span class="line">    <span class="comment"># (3) 把 list 的維度從 (1, n) 變為 (n, 1) </span></span><br><span class="line">    <span class="comment"># (4) 且轉換為 long 整數型態</span></span><br><span class="line">    <span class="comment"># (4) 如果 rating 超過 4 才會計算</span></span><br><span class="line">    edge_attr = torch.from_numpy(df[link_index_col].values).view(-<span class="number">1</span>, <span class="number">1</span>).to(torch.long) &gt;= rating_threshold</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 合併 src dst 為 COO 格式</span></span><br><span class="line">    edge_index = [[], []]</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(edge_attr.shape[<span class="number">0</span>]):</span><br><span class="line">        <span class="keyword">if</span> edge_attr[i]:</span><br><span class="line">            edge_index[<span class="number">0</span>].append(src[i])</span><br><span class="line">            edge_index[<span class="number">1</span>].append(dst[i])</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 從 python list 轉為 torch tensor 格式</span></span><br><span class="line">    <span class="keyword">return</span> torch.tensor(edge_index)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">edge_index = load_edge_csv(</span><br><span class="line">    rating_path,</span><br><span class="line">    src_index_col=<span class="string">&#x27;userId&#x27;</span>,</span><br><span class="line">    src_mapping=user_mapping,</span><br><span class="line">    dst_index_col=<span class="string">&#x27;movieId&#x27;</span>,</span><br><span class="line">    dst_mapping=movie_mapping,</span><br><span class="line">    link_index_col=<span class="string">&#x27;rating&#x27;</span>,</span><br><span class="line">    rating_threshold=<span class="number">4</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># split the edges of the graph using a 80/10/10 train/validation/test split</span></span><br><span class="line">num_users, num_movies = <span class="built_in">len</span>(user_mapping), <span class="built_in">len</span>(movie_mapping)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 做一個 edge 的「編碼」表，用來做 Traning Testing Validation 資料集打亂對應的</span></span><br><span class="line">num_interactions = edge_index.shape[<span class="number">1</span>]</span><br><span class="line">all_indices = [i <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(num_interactions)]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 sklearn 中一個很好用的套件，可以只使用「一行」程式完為分資料集的工作</span></span><br><span class="line"><span class="comment"># https://clay-atlas.com/blog/2019/12/13/machine-learning-scikit-learn-train-test-split-function/</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 隨機取樣 edge 的「id」，再依 80/10/10 的比例劃分</span></span><br><span class="line"><span class="comment"># 先分 80/20，再分 20 中的 50/50</span></span><br><span class="line">train_indices, test_indices = train_test_split(</span><br><span class="line">    all_indices, test_size=<span class="number">0.2</span>, random_state=<span class="number">1</span>)</span><br><span class="line">val_indices, test_indices = train_test_split(</span><br><span class="line">    test_indices, test_size=<span class="number">0.5</span>, random_state=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用 [:, [id]] 可以保留仍意位置上的 edge，且回傳成一個 list (神奇)</span></span><br><span class="line">train_edge_index = edge_index[:, train_indices]</span><br><span class="line">val_edge_index = edge_index[:, val_indices]</span><br><span class="line">test_edge_index = edge_index[:, test_indices]</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># convert edge indices into Sparse Tensors: https://pytorch-geometric.readthedocs.io/en/latest/notes/sparse_tensor.html</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 因記憶體效能原因，把 COO 換成稀疏矩陣會好多</span></span><br><span class="line"><span class="comment"># 使用 SparseTensor 這個包把 COO 的 [2, n] ，轉為 [len(u) + len(i), len(u) + len(i)] 的方型矩陣</span></span><br><span class="line">train_sparse_edge_index = SparseTensor(row=train_edge_index[<span class="number">0</span>], col=train_edge_index[<span class="number">1</span>], sparse_sizes=(</span><br><span class="line">    num_users + num_movies, num_users + num_movies))</span><br><span class="line">val_sparse_edge_index = SparseTensor(row=val_edge_index[<span class="number">0</span>], col=val_edge_index[<span class="number">1</span>], sparse_sizes=(</span><br><span class="line">    num_users + num_movies, num_users + num_movies))</span><br><span class="line">test_sparse_edge_index = SparseTensor(row=test_edge_index[<span class="number">0</span>], col=test_edge_index[<span class="number">1</span>], sparse_sizes=(</span><br><span class="line">    num_users + num_movies, num_users + num_movies))</span><br></pre></td></tr></table></figure>
+<p><img src="https://i.imgur.com/7eaavGC.png" alt="Image" />
+轉換為最右的表示法</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># function which random samples a mini-batch of positive and negative samples</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 因為推薦系統的任務是：edge prediction</span></span><br><span class="line"><span class="comment"># 所以我們要用 transductive 的方式來切分資料集</span></span><br><span class="line"><span class="comment"># 也就是說 Traning Testing Validation 三個資料集，彼此的邊都不一樣，但是三個加在一起等於原 Graph 的邊</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sample_mini_batch</span>(<span class="params">batch_size, edge_index</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;Randomly samples indices of a minibatch given an adjacency matrix</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        batch_size (int): minibatch size</span></span><br><span class="line"><span class="string">        edge_index (torch.Tensor): 2 by N list of edges</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        tuple: user indices, positive item indices, negative item indices</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 為了使後續計算 BPR loss (有相關的邊分數高、沒相關的邊分數低)</span></span><br><span class="line">    <span class="comment"># 所以我們這邊要先手動生出一些「沒相關」的邊來</span></span><br><span class="line">    <span class="comment"># 使用 Pytorch Geometric 中的 structured_negative_sampling 函式</span></span><br><span class="line">    edges = structured_negative_sampling(edge_index)</span><br><span class="line">    edges = torch.stack(edges, dim=<span class="number">0</span>)</span><br><span class="line">    indices = random.choices(</span><br><span class="line">        [i <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(edges[<span class="number">0</span>].shape[<span class="number">0</span>])], k=batch_size)</span><br><span class="line">    batch = edges[:, indices]</span><br><span class="line">    user_indices, pos_item_indices, neg_item_indices = batch[<span class="number">0</span>], batch[<span class="number">1</span>], batch[<span class="number">2</span>]</span><br><span class="line">    <span class="keyword">return</span> user_indices, pos_item_indices, neg_item_indices</span><br></pre></td></tr></table></figure>
+<p><img src="https://i.imgur.com/CMQIQUJ.png" alt="Image" /></p>
+<h3 id="lightgcn-model">LightGCN Model</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># defines LightGCN model</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LightGCN</span>(<span class="params">MessagePassing</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;LightGCN Model as proposed in https://arxiv.org/abs/2002.02126</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, num_users, num_items, embedding_dim=<span class="number">64</span>, K=<span class="number">3</span>, add_self_loops=<span class="literal">False</span></span>):</span></span><br><span class="line">        <span class="string">&quot;&quot;&quot;Initializes LightGCN Model</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Args:</span></span><br><span class="line"><span class="string">            num_users (int): Number of users</span></span><br><span class="line"><span class="string">            num_items (int): Number of items</span></span><br><span class="line"><span class="string">            embedding_dim (int, optional): Dimensionality of embeddings. Defaults to 8.</span></span><br><span class="line"><span class="string">            K (int, optional): Number of message passing layers. Defaults to 3.</span></span><br><span class="line"><span class="string">            add_self_loops (bool, optional): Whether to add self loops for message passing. Defaults to False.</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        self.num_users, self.num_items = num_users, num_items</span><br><span class="line">        self.embedding_dim, self.K = embedding_dim, K</span><br><span class="line">        self.add_self_loops = add_self_loops</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 加入 l = 0，這是整個網路唯一個可學習參數</span></span><br><span class="line">        self.users_emb = nn.Embedding(</span><br><span class="line">            num_embeddings=self.num_users, embedding_dim=self.embedding_dim) <span class="comment"># e_u^0</span></span><br><span class="line">        self.items_emb = nn.Embedding(</span><br><span class="line">            num_embeddings=self.num_items, embedding_dim=self.embedding_dim) <span class="comment"># e_i^0</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># 初始化 Embedding</span></span><br><span class="line">        nn.init.normal_(self.users_emb.weight, std=<span class="number">0.1</span>)</span><br><span class="line">        nn.init.normal_(self.items_emb.weight, std=<span class="number">0.1</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, edge_index: SparseTensor</span>):</span></span><br><span class="line">        <span class="string">&quot;&quot;&quot;Forward propagation of LightGCN Model.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Args:</span></span><br><span class="line"><span class="string">            edge_index (SparseTensor): adjacency matrix</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Returns:</span></span><br><span class="line"><span class="string">            tuple (Tensor): e_u_k, e_u_0, e_i_k, e_i_0</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        <span class="comment"># compute \tilde&#123;A&#125;: symmetrically normalized adjacency matrix</span></span><br><span class="line">        <span class="comment"># 使用 gcn_norm 來簡化 A=DAD 的運算過程</span></span><br><span class="line">        <span class="comment"># 且加入了 self_loops</span></span><br><span class="line">        edge_index_norm = gcn_norm(</span><br><span class="line">            edge_index, add_self_loops=self.add_self_loops)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 這一步是在實作 E_0</span></span><br><span class="line">        emb_0 = torch.cat([self.users_emb.weight, self.items_emb.weight]) <span class="comment"># E^0</span></span><br><span class="line">        embs = [emb_0]</span><br><span class="line">        emb_k = emb_0</span><br><span class="line"></span><br><span class="line">        <span class="comment"># multi-scale diffusion</span></span><br><span class="line">        <span class="comment"># 從中間 node 往外 hop K 個步，並計算 propagation (Wx+b)</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(self.K):</span><br><span class="line">            emb_k = self.propagate(edge_index_norm, x=emb_k)</span><br><span class="line">            embs.append(emb_k)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 把最後不同 K 層的結果，用 mean Aggregation0</span></span><br><span class="line">        embs = torch.stack(embs, dim=<span class="number">1</span>)</span><br><span class="line">        emb_final = torch.mean(embs, dim=<span class="number">1</span>) <span class="comment"># E^K</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># 把 user item 的特徵向量分開</span></span><br><span class="line">        users_emb_final, items_emb_final = torch.split(</span><br><span class="line">            emb_final, [self.num_users, self.num_items]) <span class="comment"># splits into e_u^K and e_i^K</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># returns e_u^K, e_u^0, e_i^K, e_i^0</span></span><br><span class="line">        <span class="keyword">return</span> users_emb_final, self.users_emb.weight, items_emb_final, self.items_emb.weight</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">message</span>(<span class="params">self, x_j: Tensor</span>) -&gt; Tensor:</span></span><br><span class="line">        <span class="keyword">return</span> x_j</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">message_and_aggregate</span>(<span class="params">self, adj_t: SparseTensor, x: Tensor</span>) -&gt; Tensor:</span></span><br><span class="line">        <span class="comment"># computes \tilde&#123;A&#125; @ x</span></span><br><span class="line">        <span class="keyword">return</span> matmul(adj_t, x)</span><br><span class="line"></span><br><span class="line">model = LightGCN(num_users, num_movies)</span><br></pre></td></tr></table></figure>
+<p><img src="https://i.imgur.com/BiT5LYW.png" alt="Image" /> <img
+src="https://i.imgur.com/UGp6lJU.png" alt="Image" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">bpr_loss</span>(<span class="params">users_emb_final, users_emb_0, pos_items_emb_final, pos_items_emb_0, neg_items_emb_final, neg_items_emb_0, lambda_val</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;Bayesian Personalized Ranking Loss as described in https://arxiv.org/abs/1205.2618</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        users_emb_final (torch.Tensor): e_u_k</span></span><br><span class="line"><span class="string">        users_emb_0 (torch.Tensor): e_u_0</span></span><br><span class="line"><span class="string">        pos_items_emb_final (torch.Tensor): positive e_i_k</span></span><br><span class="line"><span class="string">        pos_items_emb_0 (torch.Tensor): positive e_i_0</span></span><br><span class="line"><span class="string">        neg_items_emb_final (torch.Tensor): negative e_i_k</span></span><br><span class="line"><span class="string">        neg_items_emb_0 (torch.Tensor): negative e_i_0</span></span><br><span class="line"><span class="string">        lambda_val (float): lambda value for regularization loss term</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        torch.Tensor: scalar bpr loss value</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    reg_loss = lambda_val * (users_emb_0.norm(<span class="number">2</span>).<span class="built_in">pow</span>(<span class="number">2</span>) +</span><br><span class="line">                             pos_items_emb_0.norm(<span class="number">2</span>).<span class="built_in">pow</span>(<span class="number">2</span>) +</span><br><span class="line">                             neg_items_emb_0.norm(<span class="number">2</span>).<span class="built_in">pow</span>(<span class="number">2</span>)) <span class="comment"># L2 loss</span></span><br><span class="line"></span><br><span class="line">    pos_scores = torch.mul(users_emb_final, pos_items_emb_final)</span><br><span class="line">    pos_scores = torch.<span class="built_in">sum</span>(pos_scores, dim=-<span class="number">1</span>) <span class="comment"># predicted scores of positive samples</span></span><br><span class="line">    neg_scores = torch.mul(users_emb_final, neg_items_emb_final)</span><br><span class="line">    neg_scores = torch.<span class="built_in">sum</span>(neg_scores, dim=-<span class="number">1</span>) <span class="comment"># predicted scores of negative samples</span></span><br><span class="line"></span><br><span class="line">    loss = -torch.mean(torch.nn.functional.softplus(pos_scores - neg_scores)) + reg_loss</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
+<p><span class="math display">\[
+\begin{equation}
+L_{BPR} = -\sum_{u = 1}^M \sum_{i \in N_u} \sum_{j \notin N_u}
+\ln{\sigma(\hat{y}_{ui} - \hat{y}_{uj})} + \lambda ||E^{(0)}||^2
+\end{equation}
+\]</span> ### Reference</p>
+<p><a
+target="_blank" rel="noopener" href="https://clay-atlas.com/blog/2019/12/13/machine-learning-scikit-learn-train-test-split-function/">sklearn
+train_test_split 使用方法</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/12/02/SwinIR-讀原始碼心得/" rel="bookmark">SwinIR 讀原始碼心得</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+              <a href="/tags/Source-Code/" rel="tag"># Source Code</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/03/15/ConvNeXt-A-ConvNet-for-the-2020s-%E6%A8%A1%E4%BB%BF-Swin-%E7%9A%84-CNN-%E7%B6%B2%E8%B7%AF/" rel="prev" title="ConvNeXt: A ConvNet for the 2020s - 模仿 Swin 的 CNN 網路">
+      <i class="fa fa-chevron-left"></i> ConvNeXt: A ConvNet for the 2020s - 模仿 Swin 的 CNN 網路
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/08/MAE-Masked-Autoencoders-Are-Scalable-Vision-Learners-%E6%A8%A1%E4%BB%BF-BERT-%E4%B8%94%E6%9B%B4%E7%B0%A1%E5%96%AE%E7%9A%84%E8%87%AA%E7%9B%A3%E7%9D%A3%E5%AD%B8%E5%BC%8F/" rel="next" title="MAE: Masked Autoencoders Are Scalable Vision Learners - 模仿 BERT 且更簡單的自監督學式">
+      MAE: Masked Autoencoders Are Scalable Vision Learners - 模仿 BERT 且更簡單的自監督學式 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F%E7%B0%A1%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">程式簡介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#import-data"><span class="nav-number">2.</span> <span class="nav-text">import data</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B3%87%E6%96%99%E9%9B%86%E5%89%8D%E8%99%95%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">資料集前處理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#lightgcn-model"><span class="nav-number">4.</span> <span class="nav-text">LightGCN Model</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2022/04/28/LightGCN-pytorch-%E5%8E%9F%E5%A7%8B%E7%A2%BC%E7%AD%86%E8%A8%98/";
+    this.page.identifier = "2022/04/28/LightGCN-pytorch-原始碼筆記/";
+    this.page.title = "LightGCN pytorch 原始碼筆記";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>

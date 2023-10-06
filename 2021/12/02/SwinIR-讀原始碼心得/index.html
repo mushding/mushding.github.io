@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/camal.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/camal.ico">
+  <link rel="mask-icon" href="/images/camal.ico" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mushding.space","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VJXPX107CF');
+</script>
+  <meta name="description" content="SwinIR 讀原始碼心得 Github 連結：https:&#x2F;&#x2F;github.com&#x2F;JingyunLiang&#x2F;SwinIR keywords:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SwinIR 讀原始碼心得">
+<meta property="og:url" content="https://mushding.space/2021/12/02/SwinIR-%E8%AE%80%E5%8E%9F%E5%A7%8B%E7%A2%BC%E5%BF%83%E5%BE%97/index.html">
+<meta property="og:site_name" content="mushding 的小小天地">
+<meta property="og:description" content="SwinIR 讀原始碼心得 Github 連結：https:&#x2F;&#x2F;github.com&#x2F;JingyunLiang&#x2F;SwinIR keywords:">
+<meta property="og:locale" content="zh_TW">
+<meta property="article:published_time" content="2021-12-02T15:50:48.000Z">
+<meta property="article:modified_time" content="2021-12-02T15:53:53.530Z">
+<meta property="article:author" content="mushding">
+<meta property="article:tag" content="Vision Transformer">
+<meta property="article:tag" content="Source Code">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://mushding.space/2021/12/02/SwinIR-%E8%AE%80%E5%8E%9F%E5%A7%8B%E7%A2%BC%E5%BF%83%E5%BE%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>SwinIR 讀原始碼心得 | mushding 的小小天地</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJXPX107CF"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VJXPX107CF');
+      }
+    </script>
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="mushding 的小小天地" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">mushding 的小小天地</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">歡迎來到 mushding 的雜七雜八生活筆記</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-demo">
+
+    <a href="/demo/" rel="section"><i class="fa fa-laptop-code fa-fw"></i>demo</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="https://mushding.space/2021/12/02/SwinIR-%E8%AE%80%E5%8E%9F%E5%A7%8B%E7%A2%BC%E5%BF%83%E5%BE%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="mushding">
+      <meta itemprop="description" content="大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mushding 的小小天地">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SwinIR 讀原始碼心得
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2021-12-02 23:50:48 / 修改時間：23:53:53" itemprop="dateCreated datePublished" datetime="2021-12-02T23:50:48+08:00">2021-12-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9B%BB%E8%85%A6%E8%A6%96%E8%A6%BA%E6%95%B4%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">電腦視覺整理</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="閱讀次數" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">閱讀次數：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2021/12/02/SwinIR-%E8%AE%80%E5%8E%9F%E5%A7%8B%E7%A2%BC%E5%BF%83%E5%BE%97/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2021/12/02/SwinIR-讀原始碼心得/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>23k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>56 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>SwinIR 讀原始碼心得</p>
+<p>Github 連結：<a
+target="_blank" rel="noopener" href="https://github.com/JingyunLiang/SwinIR">https://github.com/JingyunLiang/SwinIR</a></p>
+<p>keywords: <span id="more"></span> ## 網路架構</p>
+<h3 id="swinir">SwinIR</h3>
+<blockquote>
+<p>網路主進入點</p>
+</blockquote>
+<h4 id="參數">參數</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">img_size              輸入圖片的大小</span><br><span class="line">patch_size              </span><br><span class="line">in_chans              輸入時的 channel 為 3</span><br><span class="line">embed_dim             Patch embedding 的大小，為 96</span><br><span class="line">depths                每一個階段由幾個 Swin Transformer 組今，為 (6, 6, 6, 6)</span><br><span class="line">num_heads             Attention 中的 head 數量，為 (6, 6, 6, 6)</span><br><span class="line">window_size           window 的大小，為 7</span><br><span class="line">mlp_ratio             Transformer 中的 MLP 層放大倍率 (invert bottleneck)，為 4</span><br><span class="line">qkv_bias              在 Attention 中加入 B Bias，目的是加入 relevent positional encoding</span><br><span class="line">qk_scale              把 QK 後的結果縮小二倍 </span><br><span class="line">drop_rate             dropout 設定比率</span><br><span class="line">attn_drop_rate        Attention 也可設 dropout 比率</span><br><span class="line">drop_path_rate</span><br><span class="line">norm_layer            normalization 層設定，為 Layer Normalization</span><br><span class="line">ape                   加入決對位置資訊</span><br><span class="line">patch_norm            在 patch embedding 後加一層 normalization</span><br><span class="line">use_checkpoint        把訓練到一半的網路參數存起來</span><br><span class="line">upscale               要把圖片放大幾倍 (2/3/4/8)</span><br><span class="line">img_range             圖片的「範圍」，1. or 255.</span><br><span class="line">upsampler             使用什麼方法上採樣，為 pixelshuffle</span><br><span class="line">resi_connection       在一個 RSTB 中，會有一個 residual connection，設定要加上一個 3x3 conv 還是一個 inverted-bottleneck 的 3x3 conv</span><br></pre></td></tr></table></figure>
+<h4 id="第-0-步---初始變數">第 0 步 - 初始變數</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, img_size=<span class="number">64</span>, patch_size=<span class="number">1</span>, in_chans=<span class="number">3</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             embed_dim=<span class="number">96</span>, depths=[<span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>], num_heads=[<span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>],</span></span></span><br><span class="line"><span class="params"><span class="function">             window_size=<span class="number">7</span>, mlp_ratio=<span class="number">4.</span>, qkv_bias=<span class="literal">True</span>, qk_scale=<span class="literal">None</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             drop_rate=<span class="number">0.</span>, attn_drop_rate=<span class="number">0.</span>, drop_path_rate=<span class="number">0.1</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             norm_layer=nn.LayerNorm, ape=<span class="literal">False</span>, patch_norm=<span class="literal">True</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             use_checkpoint=<span class="literal">False</span>, upscale=<span class="number">2</span>, img_range=<span class="number">1.</span>, upsampler=<span class="string">&#x27;&#x27;</span>, resi_connection=<span class="string">&#x27;1conv&#x27;</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             **kwargs</span>):</span></span><br><span class="line">    <span class="built_in">super</span>(SwinIR, self).__init__()</span><br><span class="line">    num_in_ch = in_chans</span><br><span class="line">    num_out_ch = in_chans</span><br><span class="line">    num_feat = <span class="number">64</span></span><br><span class="line">    self.img_range = img_range</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 做 Mean Shift 處理，方法從 EDSR 這篇論文開始的</span></span><br><span class="line">    <span class="keyword">if</span> in_chans == <span class="number">3</span>:</span><br><span class="line">        rgb_mean = (<span class="number">0.4488</span>, <span class="number">0.4371</span>, <span class="number">0.4040</span>)</span><br><span class="line">        self.mean = torch.Tensor(rgb_mean).view(<span class="number">1</span>, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        self.mean = torch.zeros(<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">    self.upscale = upscale</span><br><span class="line">    self.upsampler = upsampler</span><br><span class="line">    self.window_size = window_size</span><br></pre></td></tr></table></figure>
+<h4 id="第-1-步---淺層特徵提取">第 1 步 - 淺層特徵提取</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># in channel 為 3</span></span><br><span class="line"><span class="comment"># out channel 為 96</span></span><br><span class="line">self.conv_first = nn.Conv2d(num_in_ch, embed_dim, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<h4 id="第-2-步---深層特徵提取">第 2 步 - 深層特徵提取</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 圖片轉 Patch</span></span><br><span class="line"><span class="comment"># split image into non-overlapping patches</span></span><br><span class="line">self.patch_embed = PatchEmbed( <span class="comment">#<span class="doctag">TODO:</span></span></span><br><span class="line">    img_size=img_size, patch_size=patch_size, in_chans=embed_dim, embed_dim=embed_dim,</span><br><span class="line">    norm_layer=norm_layer <span class="keyword">if</span> self.patch_norm <span class="keyword">else</span> <span class="literal">None</span>)</span><br><span class="line">num_patches = self.patch_embed.num_patches</span><br><span class="line">patches_resolution = self.patch_embed.patches_resolution</span><br><span class="line">self.patches_resolution = patches_resolution</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Patch 轉圖片</span></span><br><span class="line"><span class="comment"># merge non-overlapping patches into image</span></span><br><span class="line">self.patch_unembed = PatchUnEmbed(</span><br><span class="line">    img_size=img_size, patch_size=patch_size, in_chans=embed_dim, embed_dim=embed_dim,</span><br><span class="line">    norm_layer=norm_layer <span class="keyword">if</span> self.patch_norm <span class="keyword">else</span> <span class="literal">None</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 加入絕對資訊 (可選擇)</span></span><br><span class="line"><span class="comment"># absolute position embedding</span></span><br><span class="line"><span class="keyword">if</span> self.ape:</span><br><span class="line">    self.absolute_pos_embed = nn.Parameter(torch.zeros(<span class="number">1</span>, num_patches, embed_dim))</span><br><span class="line">    trunc_normal_(self.absolute_pos_embed, std=<span class="number">.02</span>)</span><br><span class="line">self.pos_drop = nn.Dropout(p=drop_rate)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 隨機深度</span></span><br><span class="line"><span class="comment"># stochastic depth</span></span><br><span class="line">dpr = [x.item() <span class="keyword">for</span> x <span class="keyword">in</span> torch.linspace(<span class="number">0</span>, drop_path_rate, <span class="built_in">sum</span>(depths))]  <span class="comment"># stochastic depth decay rule</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 建立超多的 RSTB 層</span></span><br><span class="line"><span class="comment"># build Residual Swin Transformer blocks (RSTB)</span></span><br><span class="line">self.layers = nn.ModuleList()</span><br><span class="line"><span class="comment"># depth 為 [6, 6, 6, 6]</span></span><br><span class="line"><span class="comment"># 4 個 num_layers</span></span><br><span class="line"><span class="comment"># 每一個 num_layers 有 6 個 SwinIR Layer</span></span><br><span class="line"><span class="keyword">for</span> i_layer <span class="keyword">in</span> <span class="built_in">range</span>(self.num_layers):</span><br><span class="line">    layer = RSTB(dim=embed_dim,</span><br><span class="line">                 input_resolution=(patches_resolution[<span class="number">0</span>],</span><br><span class="line">                                   patches_resolution[<span class="number">1</span>]),</span><br><span class="line">                 depth=depths[i_layer],</span><br><span class="line">                 num_heads=num_heads[i_layer],</span><br><span class="line">                 window_size=window_size,</span><br><span class="line">                 mlp_ratio=self.mlp_ratio,</span><br><span class="line">                 qkv_bias=qkv_bias, qk_scale=qk_scale,</span><br><span class="line">                 drop=drop_rate, attn_drop=attn_drop_rate,</span><br><span class="line">                 drop_path=dpr[<span class="built_in">sum</span>(depths[:i_layer]):<span class="built_in">sum</span>(depths[:i_layer + <span class="number">1</span>])],  <span class="comment"># no impact on SR results</span></span><br><span class="line">                 norm_layer=norm_layer,</span><br><span class="line">                 downsample=<span class="literal">None</span>,</span><br><span class="line">                 use_checkpoint=use_checkpoint,</span><br><span class="line">                 img_size=img_size,</span><br><span class="line">                 patch_size=patch_size,</span><br><span class="line">                 resi_connection=resi_connection</span><br><span class="line">                 )</span><br><span class="line">    self.layers.append(layer)</span><br><span class="line">self.norm = norm_layer(self.num_features)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 建立最後一個 CNN 特徵提取層</span></span><br><span class="line"><span class="comment"># build the last conv layer in deep feature extraction</span></span><br><span class="line"><span class="keyword">if</span> resi_connection == <span class="string">&#x27;1conv&#x27;</span>:</span><br><span class="line">    self.conv_after_body = nn.Conv2d(embed_dim, embed_dim, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line"><span class="keyword">elif</span> resi_connection == <span class="string">&#x27;3conv&#x27;</span>:</span><br><span class="line">    <span class="comment"># to save parameters and memory</span></span><br><span class="line">    self.conv_after_body = nn.Sequential(nn.Conv2d(embed_dim, embed_dim // <span class="number">4</span>, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>),</span><br><span class="line">                                         nn.LeakyReLU(negative_slope=<span class="number">0.2</span>, inplace=<span class="literal">True</span>),</span><br><span class="line">                                         nn.Conv2d(embed_dim // <span class="number">4</span>, embed_dim // <span class="number">4</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">0</span>),</span><br><span class="line">                                         nn.LeakyReLU(negative_slope=<span class="number">0.2</span>, inplace=<span class="literal">True</span>),</span><br><span class="line">                                         nn.Conv2d(embed_dim // <span class="number">4</span>, embed_dim, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+<h3 id="patchembed">PatchEmbed</h3>
+<blockquote>
+<p>把影像轉換成 Patch Embedding</p>
+</blockquote>
+<h4 id="參數-1">參數</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">img_size              圖片大小，為 224</span><br><span class="line">patch_size            patch 的大小，為 4</span><br><span class="line">in_chans              輸入 channel，為 3</span><br><span class="line">embed_dim             輸出 channel，為 96</span><br><span class="line">norm_layer            做完 patch embedding 後要不要做 normalization，為 None</span><br></pre></td></tr></table></figure>
+<h4 id="程式">程式</h4>
+<blockquote>
+<p>直接用 flatten 的方式把圖片從 <span class="math inline">\(B\times
+H\times W\times C\)</span> 變成 <span class="math inline">\(B\times
+P^2\times C\)</span> 並且生出 patches_resolution (PxP 的大小) 還有
+num_patches (patch 數量) (為什麼沒有 conv，stride=kernel_size)</p>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, img_size=<span class="number">224</span>, patch_size=<span class="number">4</span>, in_chans=<span class="number">3</span>, embed_dim=<span class="number">96</span>, norm_layer=<span class="literal">None</span></span>):</span></span><br><span class="line">    <span class="built_in">super</span>().__init__()</span><br><span class="line">    img_size = to_2tuple(img_size)</span><br><span class="line">    patch_size = to_2tuple(patch_size)</span><br><span class="line">    patches_resolution = [img_size[<span class="number">0</span>] // patch_size[<span class="number">0</span>], img_size[<span class="number">1</span>] // patch_size[<span class="number">1</span>]]</span><br><span class="line">    </span><br><span class="line">    self.img_size = img_size</span><br><span class="line">    self.patch_size = patch_size</span><br><span class="line">    <span class="comment"># 兩個後面會用到的參數</span></span><br><span class="line">    self.patches_resolution = patches_resolution</span><br><span class="line">    self.num_patches = patches_resolution[<span class="number">0</span>] * patches_resolution[<span class="number">1</span>]</span><br><span class="line">    </span><br><span class="line">    self.in_chans = in_chans</span><br><span class="line">    self.embed_dim = embed_dim</span><br><span class="line">    <span class="keyword">if</span> norm_layer <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        self.norm = norm_layer(embed_dim)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        self.norm = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x</span>):</span></span><br><span class="line">    x = x.flatten(<span class="number">2</span>).transpose(<span class="number">1</span>, <span class="number">2</span>)  <span class="comment"># B Ph*Pw C # 就這裡，為什麼沒有用 conv？</span></span><br><span class="line">    <span class="keyword">if</span> self.norm <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        x = self.norm(x)</span><br><span class="line">    <span class="keyword">return</span> x</span><br><span class="line"></span><br><span class="line"><span class="comment"># 還有計算 flops 的 function 呢！</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self</span>):</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    H, W = self.img_size</span><br><span class="line">    <span class="keyword">if</span> self.norm <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        flops += H * W * self.embed_dim</span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="patchunembed">PatchUnEmbed</h3>
+<blockquote>
+<p>把 patch embedding 改回原圖 個人覺得意義不明</p>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, img_size=<span class="number">224</span>, patch_size=<span class="number">4</span>, in_chans=<span class="number">3</span>, embed_dim=<span class="number">96</span>, norm_layer=<span class="literal">None</span></span>):</span></span><br><span class="line">    <span class="built_in">super</span>().__init__()</span><br><span class="line">    img_size = to_2tuple(img_size)</span><br><span class="line">    patch_size = to_2tuple(patch_size)</span><br><span class="line">    patches_resolution = [img_size[<span class="number">0</span>] // patch_size[<span class="number">0</span>], img_size[<span class="number">1</span>] // patch_size[<span class="number">1</span>]]</span><br><span class="line">    self.img_size = img_size</span><br><span class="line">    self.patch_size = patch_size</span><br><span class="line">    self.patches_resolution = patches_resolution</span><br><span class="line">    self.num_patches = patches_resolution[<span class="number">0</span>] * patches_resolution[<span class="number">1</span>]</span><br><span class="line">    </span><br><span class="line">    self.in_chans = in_chans</span><br><span class="line">    self.embed_dim = embed_dim</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x, x_size</span>):</span></span><br><span class="line">    B, HW, C = x.shape</span><br><span class="line">    <span class="comment"># 在這裡把二維向量轉回三維影像</span></span><br><span class="line">    x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).view(B, self.embed_dim, x_size[<span class="number">0</span>], x_size[<span class="number">1</span>])  <span class="comment"># B Ph*Pw C</span></span><br><span class="line">    <span class="keyword">return</span> x</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self</span>):</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="rstb">RSTB</h3>
+<blockquote>
+<p>負責深層特徵的提取 由 BasicLayer (一堆 Swin Transformer) 以及一層 CNN
+所組成</p>
+</blockquote>
+<h4 id="參數-2">參數</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dim    輸入維度</span><br><span class="line">與 SwinIR 差不多，大都份都是直接傳下來的</span><br></pre></td></tr></table></figure>
+<h4 id="程式-1">程式</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 設</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, dim, input_resolution, depth, num_heads, window_size,</span></span></span><br><span class="line"><span class="params"><span class="function">             mlp_ratio=<span class="number">4.</span>, qkv_bias=<span class="literal">True</span>, qk_scale=<span class="literal">None</span>, drop=<span class="number">0.</span>, attn_drop=<span class="number">0.</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             drop_path=<span class="number">0.</span>, norm_layer=nn.LayerNorm, downsample=<span class="literal">None</span>, use_checkpoint=<span class="literal">False</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             img_size=<span class="number">224</span>, patch_size=<span class="number">4</span>, resi_connection=<span class="string">&#x27;1conv&#x27;</span></span>):</span></span><br><span class="line">    <span class="built_in">super</span>(RSTB, self).__init__()</span><br><span class="line">    self.dim = dim</span><br><span class="line">    self.input_resolution = input_resolution</span><br><span class="line">    self.residual_group = BasicLayer(dim=dim,</span><br><span class="line">                                     input_resolution=input_resolution,</span><br><span class="line">                                     depth=depth,</span><br><span class="line">                                     num_heads=num_heads,</span><br><span class="line">                                     window_size=window_size,</span><br><span class="line">                                     mlp_ratio=mlp_ratio,</span><br><span class="line">                                     qkv_bias=qkv_bias, qk_scale=qk_scale,</span><br><span class="line">                                     drop=drop, attn_drop=attn_drop,</span><br><span class="line">                                     drop_path=drop_path,</span><br><span class="line">                                     norm_layer=norm_layer,</span><br><span class="line">                                     downsample=downsample,</span><br><span class="line">                                     use_checkpoint=use_checkpoint)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 選擇一個 3x3 還是 bottlenect 3x3</span></span><br><span class="line">    <span class="keyword">if</span> resi_connection == <span class="string">&#x27;1conv&#x27;</span>:</span><br><span class="line">        self.conv = nn.Conv2d(dim, dim, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">    <span class="keyword">elif</span> resi_connection == <span class="string">&#x27;3conv&#x27;</span>:</span><br><span class="line">        <span class="comment"># to save parameters and memory</span></span><br><span class="line">        self.conv = nn.Sequential(nn.Conv2d(dim, dim // <span class="number">4</span>, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>), nn.LeakyReLU(negative_slope=<span class="number">0.2</span>, inplace=<span class="literal">True</span>),</span><br><span class="line">                                  nn.Conv2d(dim // <span class="number">4</span>, dim // <span class="number">4</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">0</span>),</span><br><span class="line">                                  nn.LeakyReLU(negative_slope=<span class="number">0.2</span>, inplace=<span class="literal">True</span>),</span><br><span class="line">                                  nn.Conv2d(dim // <span class="number">4</span>, dim, <span class="number">3</span>, <span class="number">1</span>, <span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 變 patch 以及變回圖片的方法</span></span><br><span class="line"><span class="comment"># 迷之 in_chans = 0，class 內跟本沒有用到這個參數…</span></span><br><span class="line">    self.patch_embed = PatchEmbed(</span><br><span class="line">        img_size=img_size, patch_size=patch_size, in_chans=<span class="number">0</span>, embed_dim=dim,</span><br><span class="line">        norm_layer=<span class="literal">None</span>)</span><br><span class="line"><span class="comment"># 這個也同理，也沒有用到 in_chans…</span></span><br><span class="line">    self.patch_unembed = PatchUnEmbed(</span><br><span class="line">        img_size=img_size, patch_size=patch_size, in_chans=<span class="number">0</span>, embed_dim=dim,</span><br><span class="line">        norm_layer=<span class="literal">None</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># forward 函數</span></span><br><span class="line"><span class="comment"># 流程：</span></span><br><span class="line"><span class="comment"># Swin Transformer 群 -&gt; 變回三維影像 -&gt; 做一層卷積 -&gt; 變回二維向量 -&gt; 加上 Residual connection (identity)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x, x_size</span>):</span></span><br><span class="line">    <span class="keyword">return</span> self.patch_embed(self.conv(self.patch_unembed(self.residual_group(x, x_size), x_size))) + x</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 貼心的計算 flops ！</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self</span>):</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    flops += self.residual_group.flops()</span><br><span class="line">    H, W = self.input_resolution</span><br><span class="line">    flops += H * W * self.dim * self.dim * <span class="number">9</span></span><br><span class="line">    flops += self.patch_embed.flops()</span><br><span class="line">    flops += self.patch_unembed.flops()</span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="basiclayer">BasicLayer</h3>
+<blockquote>
+<p>在此建立 6 層 Swin Transformer #### 參數</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">與 RSTB 差不多</span><br></pre></td></tr></table></figure>
+<h4 id="程式-2">程式</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定義一些變數</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, dim, input_resolution, depth, num_heads, window_size,</span></span></span><br><span class="line"><span class="params"><span class="function">             mlp_ratio=<span class="number">4.</span>, qkv_bias=<span class="literal">True</span>, qk_scale=<span class="literal">None</span>, drop=<span class="number">0.</span>, attn_drop=<span class="number">0.</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             drop_path=<span class="number">0.</span>, norm_layer=nn.LayerNorm, downsample=<span class="literal">None</span>, use_checkpoint=<span class="literal">False</span></span>):</span></span><br><span class="line">    <span class="built_in">super</span>().__init__()</span><br><span class="line">    self.dim = dim</span><br><span class="line">    self.input_resolution = input_resolution</span><br><span class="line">    self.depth = depth</span><br><span class="line">    self.use_checkpoint = use_checkpoint</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 堆疊 Swin Transformer Block</span></span><br><span class="line">    <span class="comment"># build blocks</span></span><br><span class="line">    self.blocks = nn.ModuleList([</span><br><span class="line">        SwinTransformerBlock(dim=dim, input_resolution=input_resolution,</span><br><span class="line">                             num_heads=num_heads, window_size=window_size,</span><br><span class="line">                             <span class="comment"># shift size 為 0 表示不動</span></span><br><span class="line">                             <span class="comment"># 當到下一個 Swin Block 時，移動 window size 的一半 (7 // 2 = 3)</span></span><br><span class="line">                             shift_size=<span class="number">0</span> <span class="keyword">if</span> (i % <span class="number">2</span> == <span class="number">0</span>) <span class="keyword">else</span> window_size // <span class="number">2</span>,</span><br><span class="line">                             mlp_ratio=mlp_ratio,</span><br><span class="line">                             qkv_bias=qkv_bias, qk_scale=qk_scale,</span><br><span class="line">                             drop=drop, attn_drop=attn_drop,</span><br><span class="line">                             drop_path=drop_path[i] <span class="keyword">if</span> <span class="built_in">isinstance</span>(drop_path, <span class="built_in">list</span>) <span class="keyword">else</span> drop_path,</span><br><span class="line">                             norm_layer=norm_layer)</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(depth)])</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 這裡做 patch merging，把 H/4 W/4 C 轉變成 H/8 W/8 2C</span></span><br><span class="line">    <span class="comment"># patch merging layer</span></span><br><span class="line">    <span class="keyword">if</span> downsample <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        self.downsample = downsample(input_resolution, dim=dim, norm_layer=norm_layer)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        self.downsample = <span class="literal">None</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定義 forward 函數</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x, x_size</span>):</span></span><br><span class="line">    <span class="keyword">for</span> blk <span class="keyword">in</span> self.blocks:</span><br><span class="line">        <span class="keyword">if</span> self.use_checkpoint:</span><br><span class="line">            x = checkpoint.checkpoint(blk, x, x_size)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            x = blk(x, x_size)</span><br><span class="line">    <span class="keyword">if</span> self.downsample <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        x = self.downsample(x)</span><br><span class="line">    <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 印出變數用的</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">extra_repr</span>(<span class="params">self</span>) -&gt; <span class="built_in">str</span>:</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;dim=<span class="subst">&#123;self.dim&#125;</span>, input_resolution=<span class="subst">&#123;self.input_resolution&#125;</span>, depth=<span class="subst">&#123;self.depth&#125;</span>&quot;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 貼心算 flop ！</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self</span>):</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> blk <span class="keyword">in</span> self.blocks:</span><br><span class="line">        flops += blk.flops()</span><br><span class="line">    <span class="keyword">if</span> self.downsample <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        flops += self.downsample.flops()</span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="swin-transformer-block">Swin Transformer Block</h3>
+<blockquote>
+<p>Swin Transformer 的主流程</p>
+</blockquote>
+<h4 id="參數-3">參數</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">比較不一樣的是：</span><br><span class="line">shift_block        window 下一個位置要移動幾格</span><br></pre></td></tr></table></figure>
+<h4 id="程式-3">程式</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定義一些初始變數</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, dim, input_resolution, num_heads, window_size=<span class="number">7</span>, shift_size=<span class="number">0</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             mlp_ratio=<span class="number">4.</span>, qkv_bias=<span class="literal">True</span>, qk_scale=<span class="literal">None</span>, drop=<span class="number">0.</span>, attn_drop=<span class="number">0.</span>, drop_path=<span class="number">0.</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">             act_layer=nn.GELU, norm_layer=nn.LayerNorm</span>):</span></span><br><span class="line">    <span class="built_in">super</span>().__init__()</span><br><span class="line">    self.dim = dim</span><br><span class="line">    self.input_resolution = input_resolution</span><br><span class="line">    self.num_heads = num_heads</span><br><span class="line">    self.window_size = window_size</span><br><span class="line">    self.shift_size = shift_size</span><br><span class="line">    self.mlp_ratio = mlp_ratio</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 如果輸入影像的大小小於 window size 的話，就不會分割 windows 了</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">min</span>(self.input_resolution) &lt;= self.window_size:</span><br><span class="line">        <span class="comment"># if window size is larger than input resolution, we don&#x27;t partition windows</span></span><br><span class="line">        self.shift_size = <span class="number">0</span></span><br><span class="line">        self.window_size = <span class="built_in">min</span>(self.input_resolution)</span><br><span class="line">    <span class="keyword">assert</span> <span class="number">0</span> &lt;= self.shift_size &lt; self.window_size, <span class="string">&quot;shift_size must in 0-window_size&quot;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Attention 中的第一個 Norm</span></span><br><span class="line">self.norm1 = norm_layer(dim)</span><br><span class="line"><span class="comment"># 這裡傳入 window attention</span></span><br><span class="line">self.attn = WindowAttention(</span><br><span class="line">    dim, window_size=to_2tuple(self.window_size), num_heads=num_heads,</span><br><span class="line">    qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop)</span><br><span class="line"><span class="comment"># 如果有使用 Schotistic depth 的話，就用 dropPath</span></span><br><span class="line">self.drop_path = DropPath(drop_path) <span class="keyword">if</span> drop_path &gt; <span class="number">0.</span> <span class="keyword">else</span> nn.Identity()</span><br><span class="line"><span class="comment"># Attention 中的第二個 Norm</span></span><br><span class="line">self.norm2 = norm_layer(dim)</span><br><span class="line"><span class="comment"># bottleneck 的 MLP，放大四倍</span></span><br><span class="line">mlp_hidden_dim = <span class="built_in">int</span>(dim * mlp_ratio)</span><br><span class="line">self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 加入不會隨著網路更新的參數 (buffer) attention mask，用來蓋住 cyclic cycle 後的計算</span></span><br><span class="line"><span class="keyword">if</span> self.shift_size &gt; <span class="number">0</span>:</span><br><span class="line">    attn_mask = self.calculate_mask(self.input_resolution)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    attn_mask = <span class="literal">None</span></span><br><span class="line">self.register_buffer(<span class="string">&quot;attn_mask&quot;</span>, attn_mask)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 產生給 SW-MSA 的 Mask (有點複雜 XD)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculate_mask</span>(<span class="params">self, x_size</span>):</span></span><br><span class="line">    <span class="comment"># calculate attention mask for SW-MSA</span></span><br><span class="line">    H, W = x_size</span><br><span class="line">    img_mask = torch.zeros((<span class="number">1</span>, H, W, <span class="number">1</span>))  <span class="comment"># 1 H W 1</span></span><br><span class="line">    h_slices = (<span class="built_in">slice</span>(<span class="number">0</span>, -self.window_size),</span><br><span class="line">                <span class="built_in">slice</span>(-self.window_size, -self.shift_size),</span><br><span class="line">                <span class="built_in">slice</span>(-self.shift_size, <span class="literal">None</span>))</span><br><span class="line">    w_slices = (<span class="built_in">slice</span>(<span class="number">0</span>, -self.window_size),</span><br><span class="line">                <span class="built_in">slice</span>(-self.window_size, -self.shift_size),</span><br><span class="line">                <span class="built_in">slice</span>(-self.shift_size, <span class="literal">None</span>))</span><br><span class="line">    cnt = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> h <span class="keyword">in</span> h_slices:</span><br><span class="line">        <span class="keyword">for</span> w <span class="keyword">in</span> w_slices:</span><br><span class="line">            img_mask[:, h, w, :] = cnt</span><br><span class="line">            cnt += <span class="number">1</span></span><br><span class="line">    mask_windows = window_partition(img_mask, self.window_size)  <span class="comment"># nW, window_size, window_size, 1</span></span><br><span class="line">    mask_windows = mask_windows.view(-<span class="number">1</span>, self.window_size * self.window_size)</span><br><span class="line">    attn_mask = mask_windows.unsqueeze(<span class="number">1</span>) - mask_windows.unsqueeze(<span class="number">2</span>)</span><br><span class="line">    attn_mask = attn_mask.masked_fill(attn_mask != <span class="number">0</span>, <span class="built_in">float</span>(-<span class="number">100.0</span>)).masked_fill(attn_mask == <span class="number">0</span>, <span class="built_in">float</span>(<span class="number">0.0</span>))</span><br><span class="line">    <span class="keyword">return</span> attn_mask</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x, x_size</span>):</span></span><br><span class="line">    H, W = x_size</span><br><span class="line">    B, L, C = x.shape</span><br><span class="line">    <span class="comment"># assert L == H * W, &quot;input feature has wrong size&quot;</span></span><br><span class="line">    shortcut = x</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 第一步：先過一個 LN</span></span><br><span class="line">    x = self.norm1(x)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 第二步：轉成三維影像做 如果 window 有移動過 -&gt; 做 cyclic shift，把影像拼回正常 windows 分佈</span></span><br><span class="line">    x = x.view(B, H, W, C)</span><br><span class="line">    <span class="comment"># cyclic shift</span></span><br><span class="line">    <span class="keyword">if</span> self.shift_size &gt; <span class="number">0</span>:</span><br><span class="line">        shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(<span class="number">1</span>, <span class="number">2</span>))</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        shifted_x = x</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 第三步：</span></span><br><span class="line"><span class="comment"># 把影像又從三維 N*H*W*C 轉變成，有 N 個 window，長寬為 M 的一堆 windows </span></span><br><span class="line">    <span class="comment"># partition windows</span></span><br><span class="line">    x_windows = window_partition(shifted_x, self.window_size)  <span class="comment"># nW*B, window_size, window_size, C</span></span><br><span class="line"><span class="comment"># 再把它轉回二維向量 nW*B, window_size*window_size, C</span></span><br><span class="line">    x_windows = x_windows.view(-<span class="number">1</span>, self.window_size * self.window_size, C)  <span class="comment"># nW*B, window_size*window_size, C</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 第四步：</span></span><br><span class="line"><span class="comment"># 經過 W-MSA 層，或是 SW-MSA 層</span></span><br><span class="line"><span class="comment"># 因為 window 的特性，只要圖片大小是 window size 的倍數，都可以放進網路中訓練 / 測試</span></span><br><span class="line">    <span class="comment"># W-MSA/SW-MSA (to be compatible for testing on images whose shapes are the multiple of window size</span></span><br><span class="line">    <span class="keyword">if</span> self.input_resolution == x_size:</span><br><span class="line">        attn_windows = self.attn(x_windows, mask=self.attn_mask)  <span class="comment"># nW*B, window_size*window_size, C</span></span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        attn_windows = self.attn(x_windows, mask=self.calculate_mask(x_size).to(x.device))</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 第五步：</span></span><br><span class="line"><span class="comment"># 把二維向量轉回三維影像</span></span><br><span class="line">    <span class="comment"># merge windows</span></span><br><span class="line">    attn_windows = attn_windows.view(-<span class="number">1</span>, self.window_size, self.window_size, C)</span><br><span class="line">    shifted_x = window_reverse(attn_windows, self.window_size, H, W)  <span class="comment"># B H&#x27; W&#x27; C</span></span><br><span class="line"><span class="comment"># 第六步：</span></span><br><span class="line"><span class="comment"># 把剛剛 cyclic shift 給拼回去</span></span><br><span class="line">    <span class="comment"># reverse cyclic shift</span></span><br><span class="line">    <span class="keyword">if</span> self.shift_size &gt; <span class="number">0</span>:</span><br><span class="line">        x = torch.roll(shifted_x, shifts=(self.shift_size, self.shift_size), dims=(<span class="number">1</span>, <span class="number">2</span>))</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        x = shifted_x</span><br><span class="line">    x = x.view(B, H * W, C)</span><br><span class="line">    </span><br><span class="line"><span class="comment"># 第七步：</span></span><br><span class="line"><span class="comment"># 首先是 Attention 的 shortcut</span></span><br><span class="line">    x = shortcut + self.drop_path(x)</span><br><span class="line"><span class="comment"># 再來是 FFN (LN + MLP) + shortcut</span></span><br><span class="line">    x = x + self.drop_path(self.mlp(self.norm2(x)))</span><br><span class="line">    <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">extra_repr</span>(<span class="params">self</span>) -&gt; <span class="built_in">str</span>:</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;dim=<span class="subst">&#123;self.dim&#125;</span>, input_resolution=<span class="subst">&#123;self.input_resolution&#125;</span>, num_heads=<span class="subst">&#123;self.num_heads&#125;</span>, &quot;</span> \</span><br><span class="line">           <span class="string">f&quot;window_size=<span class="subst">&#123;self.window_size&#125;</span>, shift_size=<span class="subst">&#123;self.shift_size&#125;</span>, mlp_ratio=<span class="subst">&#123;self.mlp_ratio&#125;</span>&quot;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self</span>):</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    H, W = self.input_resolution</span><br><span class="line">    <span class="comment"># norm1</span></span><br><span class="line">    flops += self.dim * H * W</span><br><span class="line">    <span class="comment"># W-MSA/SW-MSA</span></span><br><span class="line">    nW = H * W / self.window_size / self.window_size</span><br><span class="line">    flops += nW * self.attn.flops(self.window_size * self.window_size)</span><br><span class="line">    <span class="comment"># mlp</span></span><br><span class="line">    flops += <span class="number">2</span> * H * W * self.dim * self.dim * self.mlp_ratio</span><br><span class="line">    <span class="comment"># norm2</span></span><br><span class="line">    flops += self.dim * H * W</span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="windowattention">WindowAttention</h3>
+<blockquote>
+<p>定義 Attenion 的部份</p>
+</blockquote>
+<h4 id="參數-4">參數</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">都差不多</span><br></pre></td></tr></table></figure>
+<h4 id="程式-4">程式</h4>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 初始化變數</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, dim, window_size, num_heads, qkv_bias=<span class="literal">True</span>, qk_scale=<span class="literal">None</span>, attn_drop=<span class="number">0.</span>, proj_drop=<span class="number">0.</span></span>):</span></span><br><span class="line">    <span class="built_in">super</span>().__init__()</span><br><span class="line">    self.dim = dim</span><br><span class="line">    self.window_size = window_size  <span class="comment"># Wh, Ww</span></span><br><span class="line">    self.num_heads = num_heads</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 我現在才知道…，原來 Attention 中的特徵數要除上 head 的數量，才是一個 head 的特徵數</span></span><br><span class="line">    <span class="comment"># 為了要與其它 head 特徵相加時維持數量相等</span></span><br><span class="line">    head_dim = dim // num_heads</span><br><span class="line">    self.scale = qk_scale <span class="keyword">or</span> head_dim ** -<span class="number">0.5</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定義相對位置表 (Parameter)，等等會用來做對應用</span></span><br><span class="line"><span class="comment"># define a parameter table of relative position bias</span></span><br><span class="line">self.relative_position_bias_table = nn.Parameter(</span><br><span class="line">    torch.zeros((<span class="number">2</span> * window_size[<span class="number">0</span>] - <span class="number">1</span>) * (<span class="number">2</span> * window_size[<span class="number">1</span>] - <span class="number">1</span>), num_heads))  <span class="comment">#</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 定義論文中提到的 relative position bias </span></span><br><span class="line"><span class="comment"># get pair-wise relative position index for each token inside the window</span></span><br><span class="line">coords_h = torch.arange(self.window_size[<span class="number">0</span>])</span><br><span class="line">coords_w = torch.arange(self.window_size[<span class="number">1</span>])</span><br><span class="line">coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  <span class="comment"># 2, Wh, Ww</span></span><br><span class="line">coords_flatten = torch.flatten(coords, <span class="number">1</span>)  <span class="comment"># 2, Wh*Ww</span></span><br><span class="line">relative_coords = coords_flatten[:, :, <span class="literal">None</span>] - coords_flatten[:, <span class="literal">None</span>, :]  <span class="comment"># 2, Wh*</span></span><br><span class="line">relative_coords = relative_coords.permute(<span class="number">1</span>, <span class="number">2</span>, <span class="number">0</span>).contiguous()  <span class="comment"># Wh*Ww, Wh*Ww, 2</span></span><br><span class="line">relative_coords[:, :, <span class="number">0</span>] += self.window_size[<span class="number">0</span>] - <span class="number">1</span>  <span class="comment"># shift to start from 0</span></span><br><span class="line">relative_coords[:, :, <span class="number">1</span>] += self.window_size[<span class="number">1</span>] - <span class="number">1</span></span><br><span class="line">relative_coords[:, :, <span class="number">0</span>] *= <span class="number">2</span> * self.window_size[<span class="number">1</span>] - <span class="number">1</span></span><br><span class="line">relative_position_index = relative_coords.<span class="built_in">sum</span>(-<span class="number">1</span>)  <span class="comment"># Wh*Ww, Wh*Ww</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 稱作 relative_position_index，會用這個當 index 去對應上面的表</span></span><br><span class="line">self.register_buffer(<span class="string">&quot;relative_position_index&quot;</span>, relative_position_index)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 以下為定義 Self-Attention 的變數們</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 一口氣用 Linear 生出三倍的特徵量，分別代表 QKV 之後會再分開來</span></span><br><span class="line">self.qkv = nn.Linear(dim, dim * <span class="number">3</span>, bias=qkv_bias)</span><br><span class="line">self.attn_drop = nn.Dropout(attn_drop)</span><br><span class="line">self.proj = nn.Linear(dim, dim)</span><br><span class="line">self.proj_drop = nn.Dropout(proj_drop)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Truncated normal distribution 截斷常態分佈</span></span><br><span class="line"><span class="comment"># 簡單來說就是根據一個範圍，只選擇一定範圍的常態分佈</span></span><br><span class="line"><span class="comment"># ex 標準差為 2</span></span><br><span class="line">trunc_normal_(self.relative_position_bias_table, std=<span class="number">.02</span>)</span><br><span class="line">self.softmax = nn.Softmax(dim=-<span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">forward</span>(<span class="params">self, x, mask=<span class="literal">None</span></span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        x: input features with shape of (num_windows*B, N, C)</span></span><br><span class="line"><span class="string">        mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 在這裡把 QKV 分家</span></span><br><span class="line">    B_, N, C = x.shape</span><br><span class="line">    qkv = self.qkv(x).reshape(B_, N, <span class="number">3</span>, self.num_heads, C // self.num_heads).permute(<span class="number">2</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">1</span>, <span class="number">4</span>)</span><br><span class="line">    q, k, v = qkv[<span class="number">0</span>], qkv[<span class="number">1</span>], qkv[<span class="number">2</span>]  <span class="comment"># make torchscript happy (cannot use tensor as tuple)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># QK^T</span></span><br><span class="line">    q = q * self.scale</span><br><span class="line">    attn = (q @ k.transpose(-<span class="number">2</span>, -<span class="number">1</span>))</span><br><span class="line">		</span><br><span class="line">    <span class="comment"># QK^T + B</span></span><br><span class="line">    relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-<span class="number">1</span>)].view(</span><br><span class="line">        self.window_size[<span class="number">0</span>] * self.window_size[<span class="number">1</span>], self.window_size[<span class="number">0</span>] * self.window_size[<span class="number">1</span>], -<span class="number">1</span>)  <span class="comment"># Wh*Ww,Wh*Ww,nH</span></span><br><span class="line">    relative_position_bias = relative_position_bias.permute(<span class="number">2</span>, <span class="number">0</span>, <span class="number">1</span>).contiguous()  <span class="comment"># nH, Wh*Ww, Wh*Ww</span></span><br><span class="line">    attn = attn + relative_position_bias.unsqueeze(<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># SoftMax(QK^T + B)</span></span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        nW = mask.shape[<span class="number">0</span>]</span><br><span class="line">        attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(<span class="number">1</span>).unsqueeze(<span class="number">0</span>)</span><br><span class="line">        attn = attn.view(-<span class="number">1</span>, self.num_heads, N, N)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">    attn = self.attn_drop(attn)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># SoftMax(QK^T + B) V</span></span><br><span class="line">    x = (attn @ v).transpose(<span class="number">1</span>, <span class="number">2</span>).reshape(B_, N, C)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># SoftMax(QK^T + B) V W^V</span></span><br><span class="line">    x = self.proj(x)</span><br><span class="line">    x = self.proj_drop(x)</span><br><span class="line">    <span class="keyword">return</span> x</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">extra_repr</span>(<span class="params">self</span>) -&gt; <span class="built_in">str</span>:</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&#x27;dim=<span class="subst">&#123;self.dim&#125;</span>, window_size=<span class="subst">&#123;self.window_size&#125;</span>, num_heads=<span class="subst">&#123;self.num_heads&#125;</span>&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">flops</span>(<span class="params">self, N</span>):</span></span><br><span class="line">    <span class="comment"># calculate flops for 1 window with token length of N</span></span><br><span class="line">    flops = <span class="number">0</span></span><br><span class="line">    <span class="comment"># qkv = self.qkv(x)</span></span><br><span class="line">    flops += N * self.dim * <span class="number">3</span> * self.dim</span><br><span class="line">    <span class="comment"># attn = (q @ k.transpose(-2, -1))</span></span><br><span class="line">    flops += self.num_heads * N * (self.dim // self.num_heads) * N</span><br><span class="line">    <span class="comment">#  x = (attn @ v)</span></span><br><span class="line">    flops += self.num_heads * N * N * (self.dim // self.num_heads)</span><br><span class="line">    <span class="comment"># x = self.proj(x)</span></span><br><span class="line">    flops += N * self.dim * self.dim</span><br><span class="line">    <span class="keyword">return</span> flops</span><br></pre></td></tr></table></figure>
+<h3 id="window_partition">window_partition</h3>
+<blockquote>
+<p>把 BxHxWxC 變成</p>
+<p>(Bx window 數量) x window 長 x window 寬 x C</p>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">window_partition</span>(<span class="params">x, window_size</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        x: (B, H, W, C)</span></span><br><span class="line"><span class="string">        window_size (int): window size</span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        windows: (num_windows*B, window_size, window_size, C)</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    B, H, W, C = x.shape</span><br><span class="line">    x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)</span><br><span class="line">    windows = x.permute(<span class="number">0</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">5</span>).contiguous().view(-<span class="number">1</span>, window_size, window_size, C)</span><br><span class="line">    <span class="keyword">return</span> windows</span><br></pre></td></tr></table></figure>
+<h3 id="window_reverse">window_reverse</h3>
+<blockquote>
+<p>(Bx window 數量) x window 長 x window 寬 x C</p>
+<p>變成 BxHxWxC</p>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">window_reverse</span>(<span class="params">windows, window_size, H, W</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Args:</span></span><br><span class="line"><span class="string">        windows: (num_windows*B, window_size, window_size, C)</span></span><br><span class="line"><span class="string">        window_size (int): Window size</span></span><br><span class="line"><span class="string">        H (int): Height of image</span></span><br><span class="line"><span class="string">        W (int): Width of image</span></span><br><span class="line"><span class="string">    Returns:</span></span><br><span class="line"><span class="string">        x: (B, H, W, C)</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    B = <span class="built_in">int</span>(windows.shape[<span class="number">0</span>] / (H * W / window_size / window_size))</span><br><span class="line">    x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -<span class="number">1</span>)</span><br><span class="line">    x = x.permute(<span class="number">0</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">5</span>).contiguous().view(B, H, W, -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相關文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/04/28/LightGCN-pytorch-原始碼筆記/" rel="bookmark">LightGCN pytorch 原始碼筆記</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/07/NLP-與-CV-的結合：self-attention-以及-Transformer/" rel="bookmark">NLP 與 CV 的結合：self attention 以及 Transformer</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/08/NLP-與-CV-的結合：End-to-End-Object-Detection-with-Transformers-DETR/" rel="bookmark">NLP 與 CV 的結合：End-to-End Object Detection with Transformers DETR</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/NLP-與-CV-的結合：Deformable-DETR-Deformable-Transformer-For-End-To-End-Object-Detection-正面對決-DETR-的缺點！/" rel="bookmark">NLP 與 CV 的結合：Deformable DETR: Deformable Transformer For End-To-End Object Detection - 正面對決 DETR 的缺點！</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/09/Vision-Transformer-演化史-An-Image-is-Worth-16x16-Words-Transformers-for-Image-Recognition-at-Scale-正式開始-Transformer-元年/" rel="bookmark">Vision Transformer 演化史: An Image is Worth 16x16 Words:Transformers for Image Recognition at Scale - 正式開始 Transformer 元年</a></div>
+    </li>
+  </ul>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Vision-Transformer/" rel="tag"># Vision Transformer</a>
+              <a href="/tags/Source-Code/" rel="tag"># Source Code</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/12/02/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-SwinIR-Image-Restoration-Using-Swin-Transformer/" rel="prev" title="Vision Transformer 演化史: SwinIR: Image Restoration Using Swin Transformer">
+      <i class="fa fa-chevron-left"></i> Vision Transformer 演化史: SwinIR: Image Restoration Using Swin Transformer
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/12/03/Vision-Transformer-%E6%BC%94%E5%8C%96%E5%8F%B2-CSWin-Transformer-A-General-Vision-Transformer-Backbone-with-Cross-Shaped-Windows/" rel="next" title="Vision Transformer 演化史: CSWin Transformer: A General Vision Transformer Backbone with Cross-Shaped Windows">
+      Vision Transformer 演化史: CSWin Transformer: A General Vision Transformer Backbone with Cross-Shaped Windows <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#swinir"><span class="nav-number">1.</span> <span class="nav-text">SwinIR</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%83%E6%95%B8"><span class="nav-number">1.1.</span> <span class="nav-text">參數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AC%AC-0-%E6%AD%A5---%E5%88%9D%E5%A7%8B%E8%AE%8A%E6%95%B8"><span class="nav-number">1.2.</span> <span class="nav-text">第 0 步 - 初始變數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AC%AC-1-%E6%AD%A5---%E6%B7%BA%E5%B1%A4%E7%89%B9%E5%BE%B5%E6%8F%90%E5%8F%96"><span class="nav-number">1.3.</span> <span class="nav-text">第 1 步 - 淺層特徵提取</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AC%AC-2-%E6%AD%A5---%E6%B7%B1%E5%B1%A4%E7%89%B9%E5%BE%B5%E6%8F%90%E5%8F%96"><span class="nav-number">1.4.</span> <span class="nav-text">第 2 步 - 深層特徵提取</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#patchembed"><span class="nav-number">2.</span> <span class="nav-text">PatchEmbed</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%83%E6%95%B8-1"><span class="nav-number">2.1.</span> <span class="nav-text">參數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F"><span class="nav-number">2.2.</span> <span class="nav-text">程式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#patchunembed"><span class="nav-number">3.</span> <span class="nav-text">PatchUnEmbed</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rstb"><span class="nav-number">4.</span> <span class="nav-text">RSTB</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%83%E6%95%B8-2"><span class="nav-number">4.1.</span> <span class="nav-text">參數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F-1"><span class="nav-number">4.2.</span> <span class="nav-text">程式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#basiclayer"><span class="nav-number">5.</span> <span class="nav-text">BasicLayer</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F-2"><span class="nav-number">5.1.</span> <span class="nav-text">程式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#swin-transformer-block"><span class="nav-number">6.</span> <span class="nav-text">Swin Transformer Block</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%83%E6%95%B8-3"><span class="nav-number">6.1.</span> <span class="nav-text">參數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F-3"><span class="nav-number">6.2.</span> <span class="nav-text">程式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#windowattention"><span class="nav-number">7.</span> <span class="nav-text">WindowAttention</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%83%E6%95%B8-4"><span class="nav-number">7.1.</span> <span class="nav-text">參數</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A8%8B%E5%BC%8F-4"><span class="nav-number">7.2.</span> <span class="nav-text">程式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#window_partition"><span class="nav-number">8.</span> <span class="nav-text">window_partition</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#window_reverse"><span class="nav-number">9.</span> <span class="nav-text">window_reverse</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="mushding"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">mushding</p>
+  <div class="site-description" itemprop="description">大家好我是 mushding 一個喜歡做做筆記勝於耍廢的人 永遠只以一句話做為人生目標： 時間花在哪裡，成就就在哪裡</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/mushding" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:ajy1005464@gmail.com" title="E-Mail → mailto:ajy1005464@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://instagram.com/mushding" title="Instagram → https:&#x2F;&#x2F;instagram.com&#x2F;mushding" rel="noopener" target="_blank"><i class="fab fa-instagram fa-fw"></i>Instagram</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fas fa-dragon"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">若要轉載文章，麻煩請保留原作者名稱與原始連結。</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 強力驅動
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="訪客總數">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="總瀏覽次數">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://mushding-website.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mushding.space/2021/12/02/SwinIR-%E8%AE%80%E5%8E%9F%E5%A7%8B%E7%A2%BC%E5%BF%83%E5%BE%97/";
+    this.page.identifier = "2021/12/02/SwinIR-讀原始碼心得/";
+    this.page.title = "SwinIR 讀原始碼心得";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://mushding-website.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+    </div>
+</body>
+</html>
