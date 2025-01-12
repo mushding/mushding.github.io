@@ -1,0 +1,34 @@
+version: '3'
+services:
+  frontend:
+    build: ./hexo
+    image: "mushding_website-hexoapp:1.0.0"
+    restart: unless-stopped
+    networks:
+      - sub-etha
+    volumes: 
+      - ./hexo/public:/usr/share/nginx/html
+#   backend:
+#     build: ./server
+#     image: "expressapp:1.0.0"
+#     restart: unless-stopped
+#     networks:
+#       - sub-etha
+#     depends_on:
+#       - db
+#     environment: 
+#       TZ: Asia/Taipei
+  revproxy:
+    build: ./nginx
+    image: "mushding_website-reverseproxy:1.0.0"
+    restart: unless-stopped
+    networks:
+      - sub-etha
+    ports:
+      - 443:443
+      - 80:80
+    depends_on: 
+      - frontend
+networks:
+  sub-etha:
+    driver: bridge
